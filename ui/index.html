@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LLM Tracer</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- 头部 -->
+    <header class="header">
+      <div class="header-main">
+        <h1>📊 LLM Tracer <span class="header-author">by Tywin</span></h1>
+        <p class="header-desc">OpenClaw LLM 交互追踪器 — 📊 Token 消耗 · 💰 费用估算 · 👁 模型交互内容可视化 · 🚀 纯本地化</p>
+      </div>
+      <div class="header-actions">
+        <span class="db-size">💾 本地存储占用: <span id="dbSize">--</span></span>
+        <button class="btn btn-danger btn-sm" id="clearBtn">🗑️ 清理</button>
+      </div>
+    </header>
+
+    <!-- 导航 -->
+    <nav class="nav">
+      <button class="nav-btn active" data-view="list">📋 列表</button>
+      <button class="nav-btn" data-view="stats">📊 统计</button>
+    </nav>
+
+    <!-- 列表视图 -->
+    <div id="listView" class="view active">
+      <!-- 筛选栏 -->
+      <div class="filters">
+        <input type="text" id="keyword" placeholder="🔍 搜索内容..." class="filter-input">
+        <select id="filterTime" class="filter-select">
+          <option value="">🕐 全部时间</option>
+          <option value="30s">近 30秒</option>
+          <option value="1m">近 1分钟</option>
+          <option value="2m">近 2分钟</option>
+          <option value="5m">近 5分钟</option>
+          <option value="10m">近 10分钟</option>
+          <option value="20m">近 20分钟</option>
+          <option value="30m">近 30分钟</option>
+          <option value="1h">近 1小时</option>
+          <option value="5h">近 5小时</option>
+          <option value="10h">近 10小时</option>
+          <option value="1d">近 1天</option>
+          <option value="3d">近 3天</option>
+          <option value="5d">近 5天</option>
+          <option value="10d">近 10天</option>
+          <option value="1M">近 1月</option>
+        </select>
+        <select id="filterAgent" class="filter-select">
+          <option value="">🤖 全部 Agent</option>
+        </select>
+        <select id="filterChannel" class="filter-select">
+          <option value="">📡 全部 Channel</option>
+        </select>
+        <select id="filterProvider" class="filter-select">
+          <option value="">🏢 全部 Provider</option>
+        </select>
+        <select id="filterModel" class="filter-select">
+          <option value="">🧠 全部 Model</option>
+        </select>
+        <select id="filterStatus" class="filter-select">
+          <option value="">📋 全部状态</option>
+          <option value="pending">⏳ pending</option>
+          <option value="success">✅ success</option>
+          <option value="error">❌ error</option>
+        </select>
+        <button id="searchBtn" class="btn">🔍 搜索</button>
+      </div>
+
+      <!-- 表格 -->
+      <table class="table">
+        <thead>
+          <tr>
+            <th>🕐 时间</th>
+            <th>🤖 Agent</th>
+            <th>📡 Channel</th>
+            <th>🧠 Model</th>
+            <th>📥 输入Token</th>
+            <th>📤 输出Token</th>
+            <th>⚡ 缓存Token</th>
+            <th>📊 总计Token</th>
+            <th>💰 花费</th>
+            <th>📋 状态</th>
+          </tr>
+        </thead>
+        <tbody id="traceList"></tbody>
+      </table>
+
+      <!-- 分页 -->
+      <div class="pagination">
+        <button id="prevPage" class="btn" disabled>上一页</button>
+        <span id="pageInfo">第 1 页 / 共 1 页</span>
+        <button id="nextPage" class="btn" disabled>下一页</button>
+      </div>
+    </div>
+
+    <!-- 统计视图 -->
+    <div id="statsView" class="view">
+      <!-- 总览 -->
+      <div class="stats-summary">
+        <div class="stat-card">
+          <div class="stat-value" id="totalTraces">--</div>
+          <div class="stat-label">📞 总调用</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="totalTokens">--</div>
+          <div class="stat-label">📊 总 Token</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="totalCost">--</div>
+          <div class="stat-label">💰 总花费</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="totalCacheHit">--</div>
+          <div class="stat-label">⚡ 缓存命中</div>
+        </div>
+      </div>
+
+      <!-- 按维度统计 -->
+      <div class="stats-sections">
+        <section class="stats-section">
+          <h3>🏢 按 Provider 统计</h3>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Provider</th>
+                <th>📞 调用</th>
+                <th>📊 Token</th>
+                <th>⚡ 缓存</th>
+                <th>💰 花费</th>
+                <th>⏱️ 耗时</th>
+              </tr>
+            </thead>
+            <tbody id="statsProvider"></tbody>
+          </table>
+        </section>
+
+        <section class="stats-section">
+          <h3>🧠 按 Model 统计</h3>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Model</th>
+                <th>📞 调用</th>
+                <th>📊 Token</th>
+                <th>⚡ 缓存</th>
+                <th>💰 花费</th>
+                <th>⏱️ 耗时</th>
+              </tr>
+            </thead>
+            <tbody id="statsModel"></tbody>
+          </table>
+        </section>
+
+        <section class="stats-section">
+          <h3>🤖 按 Agent 统计</h3>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Agent</th>
+                <th>📞 调用</th>
+                <th>📊 Token</th>
+                <th>⚡ 缓存</th>
+                <th>💰 花费</th>
+                <th>⏱️ 耗时</th>
+              </tr>
+            </thead>
+            <tbody id="statsAgent"></tbody>
+          </table>
+        </section>
+
+        <section class="stats-section">
+          <h3>📡 按 Channel 统计</h3>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Channel</th>
+                <th>📞 调用</th>
+                <th>📊 Token</th>
+                <th>⚡ 缓存</th>
+                <th>💰 花费</th>
+                <th>⏱️ 耗时</th>
+              </tr>
+            </thead>
+            <tbody id="statsChannel"></tbody>
+          </table>
+        </section>
+      </div>
+    </div>
+
+    <!-- 详情弹窗 -->
+    <div id="detailModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <span id="detailTitle"></span>
+          <span id="detailMeta"></span>
+        </div>
+        <div class="modal-body" id="detailBody"></div>
+      </div>
+    </div>
+
+    <!-- 清理弹窗 -->
+    <div id="clearModal" class="modal">
+      <div class="clear-modal-content">
+        <h3>🗑️ 清理数据</h3>
+        <p>请选择要清理的数据范围：</p>
+        <div class="clear-options">
+          <button class="btn btn-warning clear-option" data-clear="1d">清理 1天前数据</button>
+          <button class="btn btn-warning clear-option" data-clear="3d">清理 3天前数据</button>
+          <button class="btn btn-danger clear-option" data-clear="all">清理全部数据</button>
+        </div>
+        <button class="btn" id="closeClearModal">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

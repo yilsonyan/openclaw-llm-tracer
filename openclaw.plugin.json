@@ -1,0 +1,59 @@
+{
+  "id": "openclaw-llm-tracer",
+  "name": "LLM Tracer",
+  "description": "记录 LLM 交互，提供可视化查询界面",
+  "version": "1.0.0",
+  "hooks": ["llm_input", "llm_output"],
+  "configSchema": {
+    "type": "object",
+    "properties": {
+      "enabled": {
+        "type": "boolean",
+        "default": true,
+        "description": "启用/禁用记录"
+      },
+      "uiEnabled": {
+        "type": "boolean",
+        "default": true,
+        "description": "启用 UI 服务"
+      },
+      "uiPort": {
+        "type": "number",
+        "default": 5000,
+        "description": "UI 服务端口"
+      },
+      "dbPath": {
+        "type": "string",
+        "default": "~/.openclaw/extensions/openclaw-llm-tracer/data/traces.db",
+        "description": "数据库路径"
+      },
+      "redactSensitive": {
+        "type": "boolean",
+        "default": true,
+        "description": "脱敏敏感信息（API Key 等）"
+      }
+    }
+  },
+  "uiHints": {
+    "enabled": {
+      "label": "启用记录",
+      "help": "启用/禁用 LLM 交互记录"
+    },
+    "uiEnabled": {
+      "label": "启用 UI",
+      "help": "启用可视化查询界面"
+    },
+    "uiPort": {
+      "label": "UI 端口",
+      "help": "Web UI 服务端口"
+    },
+    "dbPath": {
+      "label": "数据库路径",
+      "help": "SQLite 数据库文件存储路径"
+    },
+    "redactSensitive": {
+      "label": "脱敏敏感信息",
+      "help": "自动脱敏 API Key、Token 等敏感信息"
+    }
+  }
+}
