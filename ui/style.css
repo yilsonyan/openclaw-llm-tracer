@@ -495,6 +495,116 @@ body {
   overflow: auto;
 }
 
+/* 请求内容区块 */
+.request-section {
+  margin-bottom: 12px;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.request-section:last-child {
+  margin-bottom: 0;
+}
+
+.request-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+  background: #fafafa;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 13px;
+  user-select: none;
+}
+
+.request-section-header:hover {
+  background: #f5f5f5;
+}
+
+.section-toggle {
+  font-size: 12px;
+  color: #1890ff;
+  font-weight: 400;
+}
+
+.request-section-content {
+  padding: 12px 15px;
+  background: #fff;
+}
+
+.request-section-content.collapsed {
+  display: none;
+}
+
+.request-section-content .chat-message {
+  margin-bottom: 10px;
+}
+
+.request-section-content .chat-message:last-child {
+  margin-bottom: 0;
+}
+
+/* 悬浮提示样式 */
+.metadata-hint {
+  font-size: 11px;
+  color: #1890ff;
+  cursor: pointer;
+  margin-left: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(24, 144, 255, 0.1);
+}
+
+.metadata-hint:hover {
+  background: rgba(24, 144, 255, 0.2);
+}
+
+.metadata-tooltip {
+  display: none;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 80%;
+  max-width: 600px;
+  max-height: 80vh;
+  padding: 20px;
+  background: #333;
+  color: #fff;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.6;
+  overflow: auto;
+  z-index: 1000;
+  white-space: pre-wrap;
+  word-break: break-word;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+}
+
+.metadata-tooltip.active {
+  display: block;
+}
+
+.metadata-tooltip-close {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  font-size: 24px;
+  color: #999;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.metadata-tooltip-close:hover {
+  color: #fff;
+}
+
+.metadata-tooltip-content {
+  margin-top: 10px;
+}
+
 /* 聊天对话样式 */
 .chat-message {
   margin-bottom: 16px;
@@ -556,20 +666,28 @@ body {
 }
 
 .chat-bubble {
-  padding: 12px 16px;
+  padding: 10px 14px;
+  position: relative;
 }
 
 .chat-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .chat-role {
   font-weight: 600;
   font-size: 12px;
   color: #666;
+}
+
+.chat-content {
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #333;
+  line-height: 1.5;
 }
 
 .chat-toggle {

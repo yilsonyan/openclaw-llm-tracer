@@ -27,6 +27,9 @@
 ### 统计信息
 ![stats.png](doc_resource/stats.png)
 
+### 问题排查
+![touble_shotting1.jpeg](doc_resource/touble_shotting1.jpeg)
+![touble_shotting2.png](doc_resource/touble_shotting2.png)
 ---
 
 ## 🚀 安装方式

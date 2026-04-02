@@ -245,7 +245,73 @@ async function showDetail(id) {
   }
 
   document.getElementById('detailBody').innerHTML = html;
+
+  // 绑定请求区块的折叠事件
+  document.querySelectorAll('.request-section-header').forEach(header => {
+    header.addEventListener('click', () => {
+      const content = header.nextElementSibling;
+      const toggle = header.querySelector('.section-toggle');
+      if (content.classList.contains('collapsed')) {
+        content.classList.remove('collapsed');
+        toggle.textContent = '收起';
+      } else {
+        content.classList.add('collapsed');
+        toggle.textContent = '展开';
+      }
+    });
+  });
+
+  // 绑定原始按钮点击事件
+  document.querySelectorAll('.metadata-hint').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const tooltip = btn.closest('.chat-bubble').querySelector('.metadata-tooltip');
+      if (tooltip) {
+        tooltip.classList.add('active');
+      }
+    });
+  });
+
+  // 绑定tooltip关闭按钮
+  document.querySelectorAll('.metadata-tooltip-close').forEach(btn => {
+    btn.addEventListener('click', () => {
+      btn.closest('.metadata-tooltip').classList.remove('active');
+    });
+  });
+
+  // 绑定聊天内容展开/收起按钮
+  document.querySelectorAll('.chat-toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const content = btn.parentElement.nextElementSibling;
+      if (content.classList.contains('collapsed')) {
+        content.classList.remove('collapsed');
+        btn.textContent = '收起';
+      } else {
+        content.classList.add('collapsed');
+        btn.textContent = '展开';
+      }
+    });
+  });
   document.getElementById('detailModal').classList.add('active');
+}
+
+// 提取用户提示词中的实际消息（去掉metadata部分）
+function extractUserMessage(prompt) {
+  if (!prompt) return { display: '', original: '' };
+
+  // 匹配 "Sender (untrusted metadata):" 后面的 JSON 块结束位置
+  // 格式: Sender (untrusted metadata):\n```json\n{...}\n```\n\n实际消息
+  const senderMatch = prompt.match(/Sender \(untrusted metadata\):\s*```json\s*[\s\S]*?```\s*/);
+
+  if (senderMatch) {
+    // 找到 Sender metadata 结束位置，取后面的内容
+    const endIndex = senderMatch.index + senderMatch[0].length;
+    const actualMessage = prompt.substring(endIndex).trim();
+    return { display: actualMessage, original: prompt };
+  }
+
+  // 没有匹配到 metadata，直接返回原文
+  return { display: prompt, original: prompt };
 }
 
 function formatRequest(request) {
@@ -253,25 +319,60 @@ function formatRequest(request) {
 
   let html = '';
 
-  // System Prompt
+  // 系统提示词区块（默认折叠）
   if (request.systemPrompt) {
-    html += createChatMessage('system', '🤖 System', request.systemPrompt);
+    html += `
+      <div class="request-section">
+        <div class="request-section-header">
+          <span>🤖 系统提示词</span>
+          <span class="section-toggle">展开</span>
+        </div>
+        <div class="request-section-content collapsed">
+          ${createChatMessage('system', '🤖 System', request.systemPrompt)}
+        </div>
+      </div>
+    `;
   }
 
-  // History Messages
+  // 历史消息区块（默认折叠）
   if (request.historyMessages && request.historyMessages.length > 0) {
+    let historyHtml = '';
     request.historyMessages.forEach(msg => {
       const isUser = msg.role === 'user';
       const roleClass = isUser ? 'user' : 'assistant';
       const roleIcon = isUser ? '👤 User' : '🤖 Assistant';
       const content = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
-      html += createChatMessage(roleClass, roleIcon, content);
+      historyHtml += createChatMessage(roleClass, roleIcon, content);
     });
+
+    html += `
+      <div class="request-section">
+        <div class="request-section-header">
+          <span>📜 历史消息 (${request.historyMessages.length}条)</span>
+          <span class="section-toggle">展开</span>
+        </div>
+        <div class="request-section-content collapsed">
+          ${historyHtml}
+        </div>
+      </div>
+    `;
   }
 
-  // Current User Prompt
+  // 用户提示词区块（默认展开）
   if (request.prompt) {
-    html += createChatMessage('user', '👤 User', request.prompt);
+    const { display, original } = extractUserMessage(request.prompt);
+
+    html += `
+      <div class="request-section">
+        <div class="request-section-header">
+          <span>👤 用户提示词</span>
+          <span class="section-toggle">收起</span>
+        </div>
+        <div class="request-section-content">
+          ${createChatMessage('user', '👤 User', display, { metadata: { display, original } })}
+        </div>
+      </div>
+    `;
   }
 
   return html || '<div class="chat-empty">暂无请求内容</div>';
@@ -286,7 +387,8 @@ function formatResponse(response) {
   if (response.lastAssistant?.content && Array.isArray(response.lastAssistant.content)) {
     response.lastAssistant.content.forEach(item => {
       if (item.type === 'thinking' && item.thinking) {
-        html += createChatMessage('thinking', '💭 思考过程', item.thinking, true);
+        // 思考过程：默认展开，超过20行或2000字符才折叠
+        html += createChatMessage('thinking', '💭 思考过程', item.thinking, { maxLines: 20, maxChars: 2000 });
       } else if (item.type === 'text' && item.text) {
         html += createChatMessage('assistant', '🤖 Assistant', item.text);
       }
@@ -309,56 +411,39 @@ function formatResponse(response) {
   return html || '<div class="chat-empty">暂无响应内容</div>';
 }
 
-function createChatMessage(type, role, content, defaultCollapsed = false) {
+function createChatMessage(type, role, content, options = {}) {
   // 确保 content 是字符串
   const text = content ? String(content) : '';
+
+  // 折叠阈值：默认5行/500字符，可自定义
+  const maxLines = options.maxLines ?? 5;
+  const maxChars = options.maxChars ?? 500;
+
   // 计算行数（按换行符分割）
   const lines = text ? text.split('\n').length : 0;
-  // 判断是否需要折叠：行数>5 或 字符数>500 或 默认折叠
-  const isLong = lines > 5 || text.length > 500;
-  const shouldCollapse = isLong || defaultCollapsed;
+  // 判断是否需要折叠
+  const shouldCollapse = lines > maxLines || text.length > maxChars;
   const collapsedClass = shouldCollapse ? 'collapsed' : '';
+
+  // metadata 支持（用于用户提示词显示原始内容）
+  const metadata = options.metadata;
+  const hasMetadata = metadata && metadata.display !== metadata.original;
 
   return `
     <div class="chat-message chat-${type}">
       <div class="chat-bubble">
         <div class="chat-header">
           <span class="chat-role">${role}</span>
-          ${shouldCollapse ? '<span class="chat-toggle" onclick="toggleChatContent(this)">展开</span>' : ''}
+          ${shouldCollapse ? '<span class="chat-toggle">展开</span>' : ''}
+          ${hasMetadata ? '<span class="metadata-hint">📋 原始</span>' : ''}
         </div>
         <div class="chat-content ${collapsedClass}">${escapeHtml(text)}</div>
+        ${hasMetadata ? `<div class="metadata-tooltip"><span class="metadata-tooltip-close">&times;</span><div class="metadata-tooltip-content">${escapeHtml(metadata.original)}</div></div>` : ''}
       </div>
     </div>
   `;
 }
 
-function toggleChatContent(btn) {
-  const content = btn.parentElement.nextElementSibling;
-  if (content.classList.contains('collapsed')) {
-    content.classList.remove('collapsed');
-    btn.textContent = '收起';
-  } else {
-    content.classList.add('collapsed');
-    btn.textContent = '展开';
-  }
-}
-
-// 调试函数 - 在控制台执行 window.debugChat() 查看状态
-window.debugChat = function() {
-  const messages = document.querySelectorAll('.chat-message');
-  console.log('聊天消息数量:', messages.length);
-  messages.forEach((msg, i) => {
-    const content = msg.querySelector('.chat-content');
-    const toggle = msg.querySelector('.chat-toggle');
-    console.log(`消息${i+1}:`, {
-      type: msg.className,
-      contentLength: content?.textContent?.length || 0,
-      lines: content?.textContent?.split('\n').length || 0,
-      hasToggle: !!toggle,
-      isCollapsed: content?.classList.contains('collapsed')
-    });
-  });
-};
 
 function escapeHtml(text) {
   if (!text) return '';
@@ -369,6 +454,16 @@ function escapeHtml(text) {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;')
     .replace(/\n/g, '<br>');
+}
+
+function escapeAttr(text) {
+  if (!text) return '';
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
 function formatUsageDetail(trace) {
@@ -660,6 +755,14 @@ function initEvents() {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       document.getElementById('detailModal').classList.remove('active');
+      document.querySelectorAll('.metadata-tooltip.active').forEach(t => t.classList.remove('active'));
+    }
+  });
+
+  // 点击其他地方关闭 metadata tooltip
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.metadata-hint') && !e.target.closest('.metadata-tooltip')) {
+      document.querySelectorAll('.metadata-tooltip.active').forEach(t => t.classList.remove('active'));
     }
   });
 }
