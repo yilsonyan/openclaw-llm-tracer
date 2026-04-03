@@ -5,8 +5,9 @@
  */
 
 import { mkdirSync, statSync, existsSync } from "node:fs";
-import { dirname } from "node:path";
+import { dirname, join } from "node:path";
 import { homedir } from "node:os";
+import { fileURLToPath } from "node:url";
 
 // ==================== 类型定义 ====================
 
@@ -137,17 +138,23 @@ export function redactSensitive(obj: unknown, depth = 0): unknown {
 
 function expandPath(path: string): string {
   if (path.startsWith("~")) {
-    return join(homedir(), path.slice(1));
+    let home = homedir();
+    // 如果 homedir() 返回空或根目录，尝试使用环境变量
+    if (!home || home === "/" || home === "") {
+      home = process.env.HOME || process.env.USERPROFILE || "";
+    }
+    // 如果还是空的或根目录，使用插件所在目录
+    if (!home || home === "/" || home === "") {
+      try {
+        const __dirname = dirname(fileURLToPath(import.meta.url));
+        home = __dirname;
+      } catch (e) {
+        home = process.cwd();
+      }
+    }
+    return join(home, path.slice(1));
   }
   return path;
-}
-
-function join(...paths: string[]): string {
-  return paths.reduce((acc, p) => {
-    if (p.startsWith("/")) return p;
-    if (acc.endsWith("/")) return acc + p;
-    return acc + "/" + p;
-  }, "");
 }
 
 // ==================== TraceStore 类 ====================
