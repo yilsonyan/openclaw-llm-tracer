@@ -135,11 +135,22 @@ async function handleApi(
     const id = parseInt(detailMatch[1]);
     const trace = store.getTraceById(id);
     if (trace) {
+      // 获取工具调用
+      const toolCalls = trace.runId ? store.getToolCallsByRunId(trace.runId) : [];
+
       // 解析 JSON 字段
       const result = {
         ...trace,
         request: trace.requestJson ? JSON.parse(trace.requestJson) : null,
         response: trace.responseJson ? JSON.parse(trace.responseJson) : null,
+        toolCalls: toolCalls.map(tc => ({
+          toolCallId: tc.toolCallId,
+          toolName: tc.toolName,
+          params: tc.params ? JSON.parse(tc.params) : null,
+          result: tc.result ? JSON.parse(tc.result) : null,
+          durationMs: tc.durationMs,
+          timestamp: tc.timestamp,
+        })),
       };
       delete (result as any).requestJson;
       delete (result as any).responseJson;

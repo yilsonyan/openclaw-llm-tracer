@@ -3,7 +3,7 @@
   "name": "LLM Tracer",
   "description": "记录 LLM 交互，提供可视化查询界面",
   "version": "1.0.0",
-  "hooks": ["llm_input", "llm_output"],
+  "hooks": ["llm_input", "llm_output", "before_tool_call", "after_tool_call", "tool_result_persist"],
   "configSchema": {
     "type": "object",
     "properties": {
@@ -19,7 +19,7 @@
       },
       "uiPort": {
         "type": "number",
-        "default": 5000,
+        "default": 80,
         "description": "UI 服务端口"
       },
       "dbPath": {

@@ -1,35 +1,38 @@
 # OpenClaw LLM Tracer
-
-> 📊 Token 消耗 · 💰 费用估算 · 👁 模型交互内容可视化 · 🚀 纯本地化
-
-可视化追踪 OpenClaw 与 LLM（Large Language Model）的交互信息。
+OpenClaw LLM 交互追踪器 - 可视化追踪 OpenClaw 与 LLM（Large Language Model）的交互信息。
+>  — 📊 Token 统计 · 💰 费用管理 · 👁 交互可视 · 🔒 本地隐私
 
 ---
 
 ## ✨ 主要功能
-
-- 📊 **Token 消耗追踪**：实时统计每次交互的 Token 使用情况
-- 💰 **费用估算**：根据模型定价自动计算费用
-- 👁 **内容可视化**：直观查看模型交互的详细内容
-- 🚀 **纯本地化**：所有数据存储在本地，保护隐私安全
-- 📈 **统计分析**：提供多维度统计图表和分析报告
-
+- 📊 **Token统计**：实时统计每次交互的 Token 使用情况
+- 💰 **费用管理**：根据模型定价自动计算费用，提供多维度统计图表和分析报告
+- 👁 **交互可视**：直观查看模型交互的详细内容
+- 🚀 **本地隐私**：所有数据存储在本地，保护隐私安全
 ---
 
 ## 📸 功能预览
 
-### 交互列表
-![traces.png](doc_resource/traces.png)
 
-### 交互详情
-![details.png](doc_resource/details.png)
+
+### 交互追踪
+#### 飞书聊天内容
+![pic](doc_resources/chat.jpg)
+
+#### 实际链路
+工具1调用和返回
+![pic](doc_resources/tool1.jpg)
+工具2调用和返回
+![pic](doc_resources/tool2.jpg)
+最终响应
+![pic](doc_resources/response.jpg)
+
+### 交互列表
+![pic](doc_resources/homepage.jpg)
 
 ### 统计信息
-![stats.png](doc_resource/stats.png)
+![pic](doc_resources/stats.jpg)
 
-### 问题排查
-![touble_shotting1.jpeg](doc_resource/touble_shotting1.jpeg)
-![touble_shotting2.png](doc_resource/touble_shotting2.png)
 ---
 
 ## 🚀 安装方式
@@ -43,7 +46,7 @@
 ### 2. 配置 OpenClaw
 修改 OpenClaw 主配置文件，在 `plugins.entries` 节点添加以下配置：
 
-![config.png](doc_resource/config.png)
+![pic](doc_resources/config.jpg)
 
 #### 添加插件配置
 
@@ -55,12 +58,8 @@
     "enabled": true,
     "config": {
       "uiEnabled": true,
-      "uiPort": 5500,
-      "dbPath": "~/.openclaw/extensions/openclaw-llm-tracer/data/traces.db",
-      "maxDbSizeMb": 100,
-      "retentionDays": 30,
-      "redactSensitive": true,
-      "prettyPrint": false
+      "uiPort": 80,
+      "dbPath": "~/.openclaw/extensions/openclaw-llm-tracer/data/traces.db"
     }
   }
 }
@@ -81,11 +80,11 @@
 
 #### ⚙️ 配置说明
 
-| 配置项 | 类型 | 默认值 | 说明 |
-|--------|------|--------|------|
-| `enabled` | boolean | `true` | 是否启用插件 |
-| `uiEnabled` | boolean | `true` | 是否启用 Web UI |
-| `uiPort` | number | `5500` | Web UI 端口 |
+| 配置项 | 类型 | 默认值                                                         | 说明 |
+|--------|------|-------------------------------------------------------------|------|
+| `enabled` | boolean | `true`                                                      | 是否启用插件 |
+| `uiEnabled` | boolean | `true`                                                      | 是否启用 Web UI |
+| `uiPort` | number | `80`                                                        | Web UI 端口 |
 | `dbPath` | string | `~/.openclaw/extensions/openclaw-llm-tracer/data/traces.db` | 数据库文件路径 |
 
 ---
@@ -99,9 +98,7 @@
 openclaw gateway restart
 
 # 浏览器中访问
-http://localhost:5500
+http://localhost
 ```
-
-
 
 > 💡 **提示**：如果修改了配置文件中的 `uiPort` 参数，请使用配置的端口号访问（例如：`http://localhost:<uiPort>`）

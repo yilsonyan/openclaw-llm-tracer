@@ -72,6 +72,17 @@ export interface StatsItem {
   avgDurationMs: number;
 }
 
+export interface ToolCallRecord {
+  id?: number;
+  runId: string;
+  toolCallId: string;
+  toolName: string;
+  params?: string;
+  result?: string;
+  durationMs?: number;
+  timestamp: string;
+}
+
 // ==================== 敏感信息脱敏 ====================
 
 const SENSITIVE_PATTERNS = [
@@ -198,6 +209,22 @@ export class TraceStore {
       this.db.exec(`CREATE INDEX IF NOT EXISTS idx_traces_session ON traces(session_id);`);
       this.db.exec(`CREATE INDEX IF NOT EXISTS idx_traces_provider_model ON traces(provider, model);`);
 
+      // 创建工具调用表
+      this.db.exec(`
+        CREATE TABLE IF NOT EXISTS tool_calls (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          run_id TEXT NOT NULL,
+          tool_call_id TEXT NOT NULL,
+          tool_name TEXT NOT NULL,
+          params TEXT,
+          result TEXT,
+          duration_ms INTEGER,
+          timestamp TEXT NOT NULL
+        );
+      `);
+      this.db.exec(`CREATE INDEX IF NOT EXISTS idx_tool_calls_run_id ON tool_calls(run_id);`);
+      this.db.exec(`CREATE INDEX IF NOT EXISTS idx_tool_calls_timestamp ON tool_calls(timestamp);`);
+
       this.initialized = true;
     } catch (err: any) {
       this.initError = err.message;
@@ -309,6 +336,85 @@ export class TraceStore {
       );
     } catch (err) {
       console.error("[llm-tracer] saveResponse error:", err);
+    }
+  }
+
+  /**
+   * 保存工具调用（after_tool_call 时调用）
+   * timestamp 使用 before_tool_call 记录的时间，保证顺序正确
+   */
+  saveToolCall(params: {
+    runId: string;
+    toolCallId: string;
+    toolName: string;
+    params?: unknown;
+    result?: unknown;
+    durationMs?: number;
+    timestamp?: string;  // 来自 before_tool_call 的时间
+  }): void {
+    if (!this.checkReady()) return;
+
+    try {
+      const paramsJson = params.params
+        ? (this.redactEnabled
+            ? JSON.stringify(redactSensitive(params.params))
+            : JSON.stringify(params.params))
+        : null;
+      const resultJson = params.result
+        ? (this.redactEnabled
+            ? JSON.stringify(redactSensitive(params.result))
+            : JSON.stringify(params.result))
+        : null;
+
+      const stmt = this.db.prepare(`
+        INSERT INTO tool_calls (
+          run_id, tool_call_id, tool_name, params, result, duration_ms, timestamp
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+      `);
+
+      // 使用 before_tool_call 记录的时间，或当前时间作为备选
+      const timestamp = params.timestamp || new Date().toISOString();
+
+      stmt.run(
+        params.runId,
+        params.toolCallId,
+        params.toolName,
+        paramsJson,
+        resultJson,
+        params.durationMs || null,
+        timestamp
+      );
+    } catch (err) {
+      console.error("[llm-tracer] saveToolCall error:", err);
+    }
+  }
+
+  /**
+   * 查询工具调用（按 runId）
+   * 使用 id 排序保证顺序正确（SQLite AUTOINCREMENT 保证插入顺序）
+   */
+  getToolCallsByRunId(runId: string): ToolCallRecord[] {
+    if (!this.checkReady()) return [];
+
+    try {
+      const stmt = this.db.prepare(`
+        SELECT * FROM tool_calls WHERE run_id = ? ORDER BY id ASC
+      `);
+      const rows = stmt.all(runId) as Record<string, unknown>[];
+
+      return rows.map(row => ({
+        id: Number(row.id),
+        runId: String(row.run_id),
+        toolCallId: String(row.tool_call_id),
+        toolName: String(row.tool_name),
+        params: row.params ? String(row.params) : undefined,
+        result: row.result ? String(row.result) : undefined,
+        durationMs: row.duration_ms ? Number(row.duration_ms) : undefined,
+        timestamp: String(row.timestamp),
+      }));
+    } catch (err) {
+      console.error("[llm-tracer] getToolCallsByRunId error:", err);
+      return [];
     }
   }
 
@@ -519,16 +625,37 @@ export class TraceStore {
     if (!this.checkReady()) return 0;
 
     try {
+      let traceCount = 0;
+      let toolCallCount = 0;
+
       if (!before) {
         // 清理全部
-        const stmt = this.db.prepare("DELETE FROM traces");
-        const result = stmt.run();
-        return result.changes;
+        const traceStmt = this.db.prepare("DELETE FROM traces");
+        const traceResult = traceStmt.run();
+        traceCount = traceResult.changes;
+
+        const toolCallStmt = this.db.prepare("DELETE FROM tool_calls");
+        const toolCallResult = toolCallStmt.run();
+        toolCallCount = toolCallResult.changes;
+      } else {
+        // 先获取要删除的 runIds
+        const runIdsStmt = this.db.prepare("SELECT DISTINCT run_id FROM traces WHERE timestamp < ?");
+        const runIds = runIdsStmt.all(before.toISOString()) as { run_id: string }[];
+
+        if (runIds.length > 0) {
+          // 删除 tool_calls
+          const toolCallStmt = this.db.prepare(`DELETE FROM tool_calls WHERE run_id IN (${runIds.map(() => '?').join(',')})`);
+          const toolCallResult = toolCallStmt.run(...runIds.map(r => r.run_id));
+          toolCallCount = toolCallResult.changes;
+
+          // 删除 traces
+          const traceStmt = this.db.prepare("DELETE FROM traces WHERE timestamp < ?");
+          const traceResult = traceStmt.run(before.toISOString());
+          traceCount = traceResult.changes;
+        }
       }
 
-      const stmt = this.db.prepare("DELETE FROM traces WHERE timestamp < ?");
-      const result = stmt.run(before.toISOString());
-      return result.changes;
+      return traceCount;
     } catch (err) {
       console.error("[llm-tracer] clearTraces error:", err);
       return 0;

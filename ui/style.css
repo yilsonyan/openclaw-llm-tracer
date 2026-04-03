@@ -113,8 +113,8 @@ body {
 
 /* 筛选栏 */
 .filters {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
   gap: 10px;
   margin-bottom: 15px;
   padding: 15px;
@@ -122,12 +122,14 @@ body {
   border-radius: 8px;
 }
 
-.filter-input {
+.filter-input,
+.filter-select {
   padding: 8px 12px;
   border: 1px solid #d9d9d9;
   border-radius: 4px;
   font-size: 14px;
-  min-width: 200px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .filter-input:focus {
@@ -135,13 +137,13 @@ body {
   border-color: #1890ff;
 }
 
-.filter-select {
-  padding: 8px 12px;
-  border: 1px solid #d9d9d9;
-  border-radius: 4px;
-  font-size: 14px;
-  background: #fff;
-  min-width: 120px;
+/* 搜索输入框跨2列（对应总Token、花费） */
+#keyword {
+  grid-column: span 2;
+}
+
+.filters .btn {
+  width: 100%;
 }
 
 /* 按钮 */
@@ -189,6 +191,7 @@ body {
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   border-collapse: collapse;
+  table-layout: fixed;
 }
 
 .table th,
@@ -208,16 +211,9 @@ body {
 
 .table td {
   font-size: 13px;
-}
-
-/* Token列左对齐 */
-.table td:nth-child(5),
-.table td:nth-child(6),
-.table td:nth-child(7),
-.table td:nth-child(8),
-.table td:nth-child(9) {
-  text-align: left;
-  font-family: 'Monaco', 'Menlo', monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .table tbody tr:hover {
@@ -547,28 +543,29 @@ body {
 }
 
 /* 悬浮提示样式 */
-.metadata-hint {
+.raw-hint {
   font-size: 11px;
-  color: #1890ff;
+  color: #bbb;
   cursor: pointer;
   margin-left: 10px;
   padding: 2px 6px;
   border-radius: 4px;
-  background: rgba(24, 144, 255, 0.1);
+  background: transparent;
 }
 
-.metadata-hint:hover {
-  background: rgba(24, 144, 255, 0.2);
+.raw-hint:hover {
+  color: #999;
+  background: rgba(0, 0, 0, 0.04);
 }
 
-.metadata-tooltip {
+.raw-tooltip {
   display: none;
   position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   width: 80%;
-  max-width: 600px;
+  max-width: 800px;
   max-height: 80vh;
   padding: 20px;
   background: #333;
@@ -578,16 +575,14 @@ body {
   line-height: 1.6;
   overflow: auto;
   z-index: 1000;
-  white-space: pre-wrap;
-  word-break: break-word;
   box-shadow: 0 10px 40px rgba(0,0,0,0.3);
 }
 
-.metadata-tooltip.active {
+.raw-tooltip.active {
   display: block;
 }
 
-.metadata-tooltip-close {
+.raw-tooltip-close {
   position: absolute;
   top: 10px;
   right: 15px;
@@ -597,12 +592,20 @@ body {
   line-height: 1;
 }
 
-.metadata-tooltip-close:hover {
+.raw-tooltip-close:hover {
   color: #fff;
 }
 
-.metadata-tooltip-content {
+.raw-tooltip-content {
   margin-top: 10px;
+}
+
+.raw-tooltip-content pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+  font-family: 'Monaco', 'Menlo', monospace;
+  font-size: 12px;
 }
 
 /* 聊天对话样式 */
@@ -644,6 +647,36 @@ body {
   background: #f6ffed;
   border-left: 4px solid #52c41a;
   border-radius: 0 12px 12px 12px;
+}
+
+.chat-tool-use {
+  float: left;
+}
+
+.chat-tool-use .chat-bubble {
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-left: 4px solid #1890ff;
+  border-radius: 0 12px 12px 12px;
+}
+
+.chat-tool-use .chat-role {
+  color: #1890ff;
+}
+
+.chat-tool-result {
+  float: left;
+  clear: both;
+}
+
+.chat-tool-result .chat-bubble {
+  background: #fffbe6;
+  border-left: 4px solid #faad14;
+  border-radius: 0 12px 12px 12px;
+}
+
+.chat-tool-result .chat-role {
+  color: #d48806;
 }
 
 .chat-thinking {
@@ -883,4 +916,172 @@ body {
 
 .clear-option {
   width: 100%;
+}
+
+/* 历史消息内容类型样式 */
+.content-text,
+.content-image,
+.content-tool-use,
+.content-tool-result,
+.content-thinking,
+.content-json {
+  margin: 0;
+}
+
+/* 多个内容块时，非首个添加上边距 */
+.chat-content > .content-text:not(:first-child),
+.chat-content > .content-image:not(:first-child),
+.chat-content > .content-tool-use:not(:first-child),
+.chat-content > .content-tool-result:not(:first-child),
+.chat-content > .content-thinking:not(:first-child),
+.chat-content > .content-json:not(:first-child) {
+  margin-top: 8px;
+}
+
+.content-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.content-image img {
+  border: 1px solid #e8e8e8;
+  transition: transform 0.2s;
+}
+
+.content-image img:hover {
+  transform: scale(1.02);
+}
+
+.content-tool-use,
+.content-tool-result {
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.content-tool-use {
+  background: #f0f5ff;
+  border-left: 3px solid #1890ff;
+}
+
+.content-tool-result {
+  background: #f6ffed;
+  border-left: 3px solid #52c41a;
+}
+
+.content-tool-result.error {
+  background: #fff2f0;
+  border-left-color: #ff4d4f;
+}
+
+.tool-header {
+  font-weight: 500;
+  margin-bottom: 6px;
+  color: #333;
+}
+
+.tool-header code {
+  background: rgba(0,0,0,0.06);
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 12px;
+}
+
+.tool-duration {
+  margin-left: 8px;
+  color: #888;
+  font-size: 12px;
+}
+
+.tool-meta {
+  display: inline-block;
+  margin-right: 12px;
+  color: #888;
+  font-size: 12px;
+}
+
+.tool-meta-row {
+  margin: 6px 0;
+  padding: 4px 0;
+  border-bottom: 1px dashed #e8e8e8;
+}
+
+/* 微信风格时间分隔线 */
+.chat-time-divider {
+  width: 100%;
+  text-align: center;
+  margin: 16px 0;
+  padding: 0;
+  color: #999;
+  font-size: 12px;
+  font-family: 'Monaco', 'Menlo', monospace;
+  clear: both;
+  display: block;
+}
+
+.chat-time-divider::before,
+.chat-time-divider::after {
+  content: '';
+  display: inline-block;
+  width: 30px;
+  height: 1px;
+  background: #e8e8e8;
+  vertical-align: middle;
+  margin: 0 10px;
+}
+
+.tool-id {
+  font-size: 11px;
+  color: #666;
+  background: rgba(0,0,0,0.04);
+  padding: 1px 4px;
+  border-radius: 3px;
+  margin-left: 6px;
+}
+
+.tool-params,
+.tool-output {
+  font-family: 'Monaco', 'Menlo', monospace;
+  font-size: 12px;
+  color: #555;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 200px;
+  overflow: auto;
+}
+
+.content-thinking {
+  margin: 0;
+  padding: 10px 12px;
+  background: #fafafa;
+  border-left: 3px solid #999;
+  border-radius: 6px;
+}
+
+.thinking-header {
+  font-weight: 500;
+  color: #666;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
+.thinking-content {
+  font-size: 13px;
+  color: #666;
+  font-style: italic;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.content-json {
+  margin: 0;
+}
+
+.content-json pre {
+  background: #f5f5f5;
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  overflow: auto;
+  max-height: 300px;
 }

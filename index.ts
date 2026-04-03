@@ -57,7 +57,7 @@ interface InFlightRequest {
 const DEFAULT_CONFIG: PluginConfig = {
   enabled: true,
   uiEnabled: true,
-  uiPort: 5500,
+  uiPort: 80,
   dbPath: "~/.openclaw/extensions/openclaw-llm-tracer/data/traces.db",
   redactSensitive: true,
 };
@@ -67,6 +67,10 @@ const inFlightRequests = new Map<string, InFlightRequest>();
 // 延迟初始化的模块
 let store: any = null;
 let server: any = null;
+
+// 工具调用开始时间记录（用于保证顺序）
+// key: runId, value: Map<toolCallId, startTime>
+const toolStartTimes = new Map<string, Map<string, string>>();
 
 const plugin = {
   id: "openclaw-llm-tracer",
@@ -144,6 +148,9 @@ const plugin = {
         const durationMs = Date.now() - requestData.startTime;
         const status = event.error ? "error" : "success";
 
+        // 调试：打印 event 的所有 key
+        api.logger.debug?.(`[llm-tracer] llm_output event keys: ${Object.keys(event).join(', ')}`);
+
         // 从 event.usage 获取 token 信息
         const usage = event.usage || {};
         const lastAssistantUsage = event.lastAssistant?.usage || {};
@@ -157,12 +164,26 @@ const plugin = {
         // cost 在 lastAssistant.usage.cost.total 中
         const cost = lastAssistantUsage.cost?.total || 0;
 
+        // 提取所有 assistant 消息（包含中间轮次）
+        const allAssistantMessages = [];
+        if (event.historyMessages && Array.isArray(event.historyMessages)) {
+          event.historyMessages.forEach((msg: any) => {
+            if (msg.role === 'assistant') {
+              allAssistantMessages.push(msg);
+            }
+          });
+        }
+
         store.saveResponse({
           runId,
           response: {
             assistantTexts: event.assistantTexts,
             lastAssistant: event.lastAssistant,
             usage: event.usage,
+            // 保存所有 assistant 消息（包含中间轮次的工具调用）
+            allAssistantMessages,
+            // 保存完整 event 用于调试
+            _rawEvent: JSON.stringify(event, null, 2),
           },
           durationMs,
           status,
@@ -174,9 +195,62 @@ const plugin = {
           errorMessage: event.error,
           sessionId: ctx?.sessionId || event.sessionId,
         });
+
+        // 清理该 runId 的工具开始时间记录
+        toolStartTimes.delete(runId);
       } catch (err) {
         api.logger.error?.("[llm-tracer] llm_output error:", err);
       }
+    });
+
+    // 注册 before_tool_call hook（同步执行，记录开始时间）
+    api.on("before_tool_call", (event: any, ctx?: HookAgentContext) => {
+      if (!store) return;
+      const runId = event.runId;
+      const toolCallId = event.toolCallId;
+      if (!runId || !toolCallId) return;
+
+      // 记录工具开始时间（用于保证顺序）
+      let runMap = toolStartTimes.get(runId);
+      if (!runMap) {
+        runMap = new Map();
+        toolStartTimes.set(runId, runMap);
+      }
+      runMap.set(toolCallId, new Date().toISOString());
+
+      api.logger.debug?.(`[llm-tracer] before_tool_call: ${event.toolName} (runId: ${runId})`);
+    });
+
+    // 注册 after_tool_call hook
+    api.on("after_tool_call", (event: any, ctx?: HookAgentContext) => {
+      if (!store) return;
+      const runId = event.runId;
+      const toolCallId = event.toolCallId;
+      if (!runId || !toolCallId) return;
+
+      // 获取记录的开始时间（保证顺序正确）
+      const runMap = toolStartTimes.get(runId);
+      const startTime = runMap?.get(toolCallId);
+      // 不在这里删除，等 llm_output 时统一清理
+
+      // 保存工具调用到数据库
+      store.saveToolCall({
+        runId,
+        toolCallId,
+        toolName: event.toolName,
+        params: event.params,
+        result: event.result,
+        durationMs: event.durationMs,
+        timestamp: startTime, // 使用 before_tool_call 记录的时间
+      });
+
+      api.logger.debug?.(`[llm-tracer] after_tool_call: ${event.toolName} (runId: ${runId})`);
+    });
+
+    // 注册 tool_result_persist hook
+    api.on("tool_result_persist", (event: any, ctx?: HookAgentContext) => {
+      if (!store) return;
+      api.logger.debug?.(`[llm-tracer] tool_result_persist: ${event.toolName}`);
     });
   },
 };

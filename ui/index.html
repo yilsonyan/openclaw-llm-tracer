@@ -12,7 +12,7 @@
     <header class="header">
       <div class="header-main">
         <h1>📊 LLM Tracer <span class="header-author">by Tywin</span></h1>
-        <p class="header-desc">OpenClaw LLM 交互追踪器 — 📊 Token 消耗 · 💰 费用估算 · 👁 模型交互内容可视化 · 🚀 纯本地化</p>
+        <p class="header-desc">OpenClaw LLM 交互追踪器 — 📊 Token 统计 · 💰 费用管理 · 👁 交互可视 · 🔒 本地隐私</p>
       </div>
       <div class="header-actions">
         <span class="db-size">💾 本地存储占用: <span id="dbSize">--</span></span>
@@ -30,7 +30,6 @@
     <div id="listView" class="view active">
       <!-- 筛选栏 -->
       <div class="filters">
-        <input type="text" id="keyword" placeholder="🔍 搜索内容..." class="filter-input">
         <select id="filterTime" class="filter-select">
           <option value="">🕐 全部时间</option>
           <option value="30s">近 30秒</option>
@@ -50,23 +49,18 @@
           <option value="1M">近 1月</option>
         </select>
         <select id="filterAgent" class="filter-select">
-          <option value="">🤖 全部 Agent</option>
-        </select>
-        <select id="filterChannel" class="filter-select">
-          <option value="">📡 全部 Channel</option>
-        </select>
-        <select id="filterProvider" class="filter-select">
-          <option value="">🏢 全部 Provider</option>
+          <option value="">🤖 全部智能体</option>
         </select>
         <select id="filterModel" class="filter-select">
-          <option value="">🧠 全部 Model</option>
+          <option value="">🧠 全部模型</option>
         </select>
         <select id="filterStatus" class="filter-select">
           <option value="">📋 全部状态</option>
-          <option value="pending">⏳ pending</option>
-          <option value="success">✅ success</option>
-          <option value="error">❌ error</option>
+          <option value="pending">⏳ 进行中</option>
+          <option value="success">✅ 成功</option>
+          <option value="error">❌ 失败</option>
         </select>
+        <input type="text" id="keyword" placeholder="🔍 搜索对话内容..." class="filter-input">
         <button id="searchBtn" class="btn">🔍 搜索</button>
       </div>
 
@@ -75,15 +69,12 @@
         <thead>
           <tr>
             <th>🕐 时间</th>
-            <th>🤖 Agent</th>
-            <th>📡 Channel</th>
-            <th>🧠 Model</th>
-            <th>📥 输入Token</th>
-            <th>📤 输出Token</th>
-            <th>⚡ 缓存Token</th>
-            <th>📊 总计Token</th>
-            <th>💰 花费</th>
+            <th>🤖 智能体</th>
+            <th>🧠 模型</th>
             <th>📋 状态</th>
+            <th>📊 总Token</th>
+            <th>💰 花费</th>
+            <th>💬 提示词</th>
           </tr>
         </thead>
         <tbody id="traceList"></tbody>
