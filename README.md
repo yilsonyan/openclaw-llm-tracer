@@ -1,30 +1,26 @@
 # OpenClaw LLM Tracer
-OpenClaw LLM 交互追踪器 - 可视化追踪 OpenClaw 与 LLM（Large Language Model）的交互信息。
->  — 📊 Token 统计 · 💰 费用管理 · 👁 交互可视 · 🔒 本地隐私
+OpenClaw LLM 交互追踪器 - 可视化追踪 OpenClaw 与 LLM（Large Language Model）的交互信息。 所有数据存储在本地，保护隐私安全。
+>  — 📊 Token 统计 · 💰 费用管理 · 👁 交互可视 · 🔒 隐私安全
 
 ---
 
 ## ✨ 主要功能
 - 📊 **Token统计**：实时统计每次交互的 Token 使用情况
 - 💰 **费用管理**：根据模型定价自动计算费用，提供多维度统计图表和分析报告
-- 👁 **交互可视**：直观查看模型交互的详细内容
-- 🚀 **本地隐私**：所有数据存储在本地，保护隐私安全
+- 👁 **交互可视**：直观查看模型交互的详细内容，便于问题排查追踪
+- 🔒 **隐私保护**：敏感信息脱敏后再存储到本地，保护隐私安全
 ---
 
 ## 📸 功能预览
-
-
-
 ### 交互追踪
-#### 飞书聊天内容
+#### 前台对话内容
 ![pic](doc_resources/chat.jpg)
-
-#### 实际链路
+#### 后台实际链路追踪
 工具1调用和返回
 ![pic](doc_resources/tool1.jpg)
 工具2调用和返回
 ![pic](doc_resources/tool2.jpg)
-最终响应
+模型处理与最终响应
 ![pic](doc_resources/response.jpg)
 
 ### 交互列表
