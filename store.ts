@@ -235,7 +235,7 @@ export class TraceStore {
       this.initialized = true;
     } catch (err: any) {
       this.initError = err.message;
-      console.error("[llm-tracer] Failed to initialize database:", err.message);
+      console.error("[openclaw-llm-tracer] Failed to initialize database:", err.message);
     }
   }
 
@@ -284,7 +284,7 @@ export class TraceStore {
         requestJson
       );
     } catch (err) {
-      console.error("[llm-tracer] saveRequest error:", err);
+      console.error("[openclaw-llm-tracer] saveRequest error:", err);
     }
   }
 
@@ -342,7 +342,7 @@ export class TraceStore {
         params.runId
       );
     } catch (err) {
-      console.error("[llm-tracer] saveResponse error:", err);
+      console.error("[openclaw-llm-tracer] saveResponse error:", err);
     }
   }
 
@@ -392,7 +392,7 @@ export class TraceStore {
         timestamp
       );
     } catch (err) {
-      console.error("[llm-tracer] saveToolCall error:", err);
+      console.error("[openclaw-llm-tracer] saveToolCall error:", err);
     }
   }
 
@@ -420,7 +420,7 @@ export class TraceStore {
         timestamp: String(row.timestamp),
       }));
     } catch (err) {
-      console.error("[llm-tracer] getToolCallsByRunId error:", err);
+      console.error("[openclaw-llm-tracer] getToolCallsByRunId error:", err);
       return [];
     }
   }
@@ -498,7 +498,7 @@ export class TraceStore {
 
       return { traces, total, page, pageSize };
     } catch (err) {
-      console.error("[llm-tracer] listTraces error:", err);
+      console.error("[openclaw-llm-tracer] listTraces error:", err);
       return { traces: [], total: 0, page: filter.page || 1, pageSize: filter.pageSize || 20 };
     }
   }
@@ -514,7 +514,7 @@ export class TraceStore {
       const row = stmt.get(id) as Record<string, unknown> | undefined;
       return row ? this.rowToRecord(row) : null;
     } catch (err) {
-      console.error("[llm-tracer] getTraceById error:", err);
+      console.error("[openclaw-llm-tracer] getTraceById error:", err);
       return null;
     }
   }
@@ -577,7 +577,7 @@ export class TraceStore {
         byChannel,
       };
     } catch (err) {
-      console.error("[llm-tracer] getStats error:", err);
+      console.error("[openclaw-llm-tracer] getStats error:", err);
       return {
         totalTraces: 0,
         totalTokens: 0,
@@ -618,7 +618,7 @@ export class TraceStore {
         avgDurationMs: Math.round(Number(row.avgDurationMs) || 0),
       }));
     } catch (err) {
-      console.error("[llm-tracer] getGroupedStats error:", err);
+      console.error("[openclaw-llm-tracer] getGroupedStats error:", err);
       return [];
     }
   }
@@ -664,7 +664,7 @@ export class TraceStore {
 
       return traceCount;
     } catch (err) {
-      console.error("[llm-tracer] clearTraces error:", err);
+      console.error("[openclaw-llm-tracer] clearTraces error:", err);
       return 0;
     }
   }
@@ -716,7 +716,7 @@ export class TraceStore {
       try {
         this.db.close();
       } catch (err) {
-        console.error("[llm-tracer] close error:", err);
+        console.error("[openclaw-llm-tracer] close error:", err);
       }
     }
   }

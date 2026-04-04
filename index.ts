@@ -82,15 +82,15 @@ const plugin = {
     const config: PluginConfig = { ...DEFAULT_CONFIG, ...rawConfig };
 
     if (!config.enabled) {
-      api.logger.info("[llm-tracer] Plugin disabled");
+      api.logger.info("[openclaw-llm-tracer] Plugin disabled");
       return;
     }
 
-    api.logger.info("[llm-tracer] Plugin registered, initializing async...");
+    api.logger.info("[openclaw-llm-tracer] Plugin registered, initializing async...");
 
     // 异步初始化，不阻塞
     initAsync(config, api).catch(err => {
-      api.logger.error("[llm-tracer] Init failed:", err?.message || err);
+      api.logger.error("[openclaw-llm-tracer] Init failed:", err?.message || err);
     });
 
     // 注册 llm_input hook
@@ -128,7 +128,7 @@ const plugin = {
           },
         });
       } catch (err) {
-        api.logger.error?.("[llm-tracer] llm_input error:", err);
+        api.logger.error?.("[openclaw-llm-tracer] llm_input error:", err);
       }
     });
 
@@ -149,7 +149,7 @@ const plugin = {
         const status = event.error ? "error" : "success";
 
         // 调试：打印 event 的所有 key
-        api.logger.debug?.(`[llm-tracer] llm_output event keys: ${Object.keys(event).join(', ')}`);
+        api.logger.debug?.(`[openclaw-llm-tracer] llm_output event keys: ${Object.keys(event).join(', ')}`);
 
         // 从 event.usage 获取 token 信息
         const usage = event.usage || {};
@@ -199,7 +199,7 @@ const plugin = {
         // 清理该 runId 的工具开始时间记录
         toolStartTimes.delete(runId);
       } catch (err) {
-        api.logger.error?.("[llm-tracer] llm_output error:", err);
+        api.logger.error?.("[openclaw-llm-tracer] llm_output error:", err);
       }
     });
 
@@ -218,7 +218,7 @@ const plugin = {
       }
       runMap.set(toolCallId, new Date().toISOString());
 
-      api.logger.debug?.(`[llm-tracer] before_tool_call: ${event.toolName} (runId: ${runId})`);
+      api.logger.debug?.(`[openclaw-llm-tracer] before_tool_call: ${event.toolName} (runId: ${runId})`);
     });
 
     // 注册 after_tool_call hook
@@ -244,13 +244,13 @@ const plugin = {
         timestamp: startTime, // 使用 before_tool_call 记录的时间
       });
 
-      api.logger.debug?.(`[llm-tracer] after_tool_call: ${event.toolName} (runId: ${runId})`);
+      api.logger.debug?.(`[openclaw-llm-tracer] after_tool_call: ${event.toolName} (runId: ${runId})`);
     });
 
     // 注册 tool_result_persist hook
     api.on("tool_result_persist", (event: any, ctx?: HookAgentContext) => {
       if (!store) return;
-      api.logger.debug?.(`[llm-tracer] tool_result_persist: ${event.toolName}`);
+      api.logger.debug?.(`[openclaw-llm-tracer] tool_result_persist: ${event.toolName}`);
     });
   },
 };
@@ -265,12 +265,12 @@ async function initAsync(config: PluginConfig, api: OpenClawPluginApi) {
     store = new TraceStore(config.dbPath, config.redactSensitive);
 
     if (!store.isReady()) {
-      api.logger.error("[llm-tracer] Store init failed:", store.getInitError());
+      api.logger.error("[openclaw-llm-tracer] Store init failed:", store.getInitError());
       store = null;
       return;
     }
 
-    api.logger.info("[llm-tracer] Store ready");
+    api.logger.info("[openclaw-llm-tracer] Store ready");
 
     // 启动 UI 服务器
     if (config.uiEnabled) {
@@ -278,14 +278,14 @@ async function initAsync(config: PluginConfig, api: OpenClawPluginApi) {
         const { startUIServer } = await import("./server.js");
         server = startUIServer(store, config.uiPort, api.logger);
         if (server) {
-          api.logger.info(`[llm-tracer] UI available at http://localhost:${config.uiPort}`);
+          api.logger.info(`[openclaw-llm-tracer] UI available at http://localhost:${config.uiPort}`);
         }
       } catch (err: any) {
-        api.logger.error("[llm-tracer] UI server error:", err?.message || err);
+        api.logger.error("[openclaw-llm-tracer] UI server error:", err?.message || err);
       }
     }
   } catch (err: any) {
-    api.logger.error("[llm-tracer] Init error:", err?.message || err);
+    api.logger.error("[openclaw-llm-tracer] Init error:", err?.message || err);
   }
 }
 

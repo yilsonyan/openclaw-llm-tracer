@@ -1,10 +1,10 @@
 {
-  "name": "@openclaw/llm-tracer",
+  "name": "@openclaw/openclaw-llm-tracer",
   "version": "1.0.0",
   "type": "module",
   "main": "index.ts",
-  "description": "记录 LLM 交互，提供可视化查询界面",
-  "author": "OpenClaw",
+  "description": "记录 OpenClaw LLM 交互，提供可视化查询界面",
+  "author": "Tywin",
   "license": "MIT",
   "dependencies": {},
   "devDependencies": {

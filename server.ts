@@ -59,7 +59,7 @@ export function startUIServer(
       // 静态文件
       await handleStatic(req, res, pathname, uiDir);
     } catch (err) {
-      logger?.error?.(`[llm-tracer] Server error: ${err}`);
+      logger?.error?.(`[openclaw-llm-tracer] Server error: ${err}`);
       res.writeHead(500, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "Internal Server Error" }));
     }
@@ -68,9 +68,9 @@ export function startUIServer(
   // 错误处理
   server.on("error", (err: any) => {
     if (err.code === "EADDRINUSE") {
-      logger?.error?.(`[llm-tracer] Port ${port} is already in use, UI server not started`);
+      logger?.error?.(`[openclaw-llm-tracer] Port ${port} is already in use, UI server not started`);
     } else {
-      logger?.error?.(`[llm-tracer] Server error: ${err.message}`);
+      logger?.error?.(`[openclaw-llm-tracer] Server error: ${err.message}`);
     }
   });
 
@@ -79,10 +79,10 @@ export function startUIServer(
   try {
     server.listen(port, () => {
       isListening = true;
-      logger?.info?.(`[llm-tracer] UI server started at http://localhost:${port}`);
+      logger?.info?.(`[openclaw-llm-tracer] UI server started at http://localhost:${port}`);
     });
   } catch (err: any) {
-    logger?.error?.(`[llm-tracer] Failed to start UI server: ${err.message}`);
+    logger?.error?.(`[openclaw-llm-tracer] Failed to start UI server: ${err.message}`);
     return null;
   }
 
