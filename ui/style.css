@@ -393,7 +393,7 @@ body {
 }
 
 .modal-header {
-  padding: 25px 30px;
+  padding: 18px 25px;
   border-bottom: 1px solid #f0f0f0;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
@@ -408,42 +408,58 @@ body {
   display: none;
 }
 
-.detail-info-grid {
+/* 详情标题栏：两行布局 */
+.detail-header-rows {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.detail-info-item {
+.detail-header-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.detail-header-card {
   background: rgba(255,255,255,0.15);
-  border-radius: 8px;
+  border-radius: 6px;
   padding: 10px 14px;
-  flex: 1;
-  min-width: 100px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.detail-info-label {
-  font-size: 11px;
-  color: rgba(255,255,255,0.8);
-  margin-bottom: 2px;
+.card-label {
+  font-size: 12px;
+  color: rgba(255,255,255,0.75);
+  font-weight: 600;
 }
 
-.detail-info-value {
+.card-value {
   font-size: 13px;
   color: #fff;
-  font-weight: 500;
+  font-weight: 400;
+}
+
+.card-value.truncate {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 120px;
 }
 
-.meta-session {
-  font-family: 'Monaco', 'Menlo', monospace;
+/* 状态标签在标题栏中的样式调整 */
+.detail-header-card .status {
   font-size: 11px;
-  background: #f5f5f5;
-  padding: 1px 4px;
-  border-radius: 3px;
+  padding: 2px 6px;
+}
+
+/* 响应式：小屏幕两列 */
+@media (max-width: 600px) {
+  .detail-header-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .modal-body {
@@ -456,6 +472,27 @@ body {
   border: 1px solid #e8e8e8;
   border-radius: 8px;
   overflow: hidden;
+}
+
+/* 可折叠区块 header 样式 */
+.collapsible-block .detail-block-header {
+  cursor: pointer;
+}
+
+.collapsible-block .detail-block-header:hover {
+  background: #f0f0f0;
+}
+
+.block-toggle {
+  font-size: 12px;
+  color: #1890ff;
+  font-weight: 400;
+}
+
+.block-count {
+  font-size: 12px;
+  color: #999;
+  font-weight: 400;
 }
 
 .detail-block.error-block {
@@ -481,6 +518,7 @@ body {
   background: #fafafa;
   border-bottom: 1px solid #e8e8e8;
   font-weight: 600;
+  font-size: 13px;
 }
 
 .detail-block-content {
@@ -489,6 +527,10 @@ body {
   line-height: 1.6;
   max-height: 500px;
   overflow: auto;
+}
+
+.detail-block-content.collapsed {
+  display: none;
 }
 
 /* 请求内容区块 */
@@ -781,70 +823,6 @@ body {
   clear: both;
 }
 
-.detail-usage {
-  padding: 10px 15px;
-  background: #f5f7fa;
-  border-top: 1px solid #e8e8e8;
-  font-size: 13px;
-  color: #666;
-}
-
-.detail-usage span {
-  margin-right: 20px;
-}
-
-/* Usage 详情 */
-.usage-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 20px;
-  padding: 20px;
-}
-
-.usage-section {
-  background: #fafafa;
-  border-radius: 8px;
-  padding: 15px;
-}
-
-.usage-section h4 {
-  margin-bottom: 12px;
-  color: #333;
-  font-size: 14px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #e8e8e8;
-}
-
-.usage-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.usage-table td {
-  padding: 8px 0;
-  font-size: 13px;
-}
-
-.usage-table td:first-child {
-  color: #666;
-}
-
-.usage-table td:last-child {
-  text-align: right;
-  font-weight: 600;
-  font-family: 'Monaco', 'Menlo', monospace;
-}
-
-.usage-table .total-row td {
-  border-top: 2px solid #d9d9d9;
-  padding-top: 12px;
-  margin-top: 8px;
-}
-
-.usage-table .total-row td:last-child {
-  color: #1890ff;
-}
-
 .response-id {
   font-family: 'Monaco', 'Menlo', monospace;
   font-size: 11px;
@@ -988,9 +966,10 @@ body {
 }
 
 .tool-duration {
-  margin-left: 8px;
-  color: #888;
+  margin-left: 4px;
+  color: #999;
   font-size: 12px;
+  font-weight: 400;
 }
 
 .tool-meta {
@@ -1084,4 +1063,19 @@ body {
   font-size: 12px;
   overflow: auto;
   max-height: 300px;
+}
+
+/* 响应错误样式 */
+.response-error {
+  margin-top: 12px;
+  padding: 12px 15px;
+  background: #fff2f0;
+  border-left: 4px solid #ff4d4f;
+  border-radius: 0 8px 8px 8px;
+  color: #ff4d4f;
+  font-size: 13px;
+}
+
+.error-icon {
+  font-weight: 600;
 }

@@ -203,78 +203,72 @@ function renderPagination() {
 async function showDetail(id) {
   const trace = await fetchAPI(`/traces/${id}`);
 
+  // 构建基本信息 + Usage 合一的标题栏（两行布局）
+  const usage = trace.response?.usage || {};
+  const lastAssistantUsage = trace.response?.lastAssistant?.usage || {};
+  const input = usage.input || lastAssistantUsage.input || trace.inputTokens || 0;
+  const output = usage.output || lastAssistantUsage.output || trace.outputTokens || 0;
+  const cacheRead = usage.cacheRead || lastAssistantUsage.cacheRead || trace.cacheReadTokens || 0;
+  const cacheWrite = lastAssistantUsage.cacheWrite || trace.cacheWriteTokens || 0;
+  const costInfo = lastAssistantUsage.cost || {};
+  const costTotal = costInfo.total || trace.cost || 0;
+
   document.getElementById('detailTitle').innerHTML = `
-    <div class="detail-info-grid">
-      <div class="detail-info-item">
-        <div class="detail-info-label">🕐 时间</div>
-        <div class="detail-info-value">${formatFullTime(trace.timestamp)}</div>
+    <div class="detail-header-rows">
+      <div class="detail-header-row">
+        <div class="detail-header-card">
+          <span class="card-label">🕐 时间</span>
+          <span class="card-value">${formatFullTime(trace.timestamp)}</span>
+        </div>
+        <div class="detail-header-card">
+          <span class="card-label">🔗 会话ID</span>
+          <span class="card-value truncate" title="${trace.sessionId || '--'}">${trace.sessionId || '--'}</span>
+        </div>
+        <div class="detail-header-card">
+          <span class="card-label">📡 渠道</span>
+          <span class="card-value">${trace.channel || '--'}</span>
+        </div>
+        <div class="detail-header-card">
+          <span class="card-label">⏱️ 耗时</span>
+          <span class="card-value">${formatDuration(trace.durationMs)}</span>
+        </div>
       </div>
-      <div class="detail-info-item">
-        <div class="detail-info-label">🤖 智能体</div>
-        <div class="detail-info-value">${trace.agentId || '--'}</div>
-      </div>
-      <div class="detail-info-item">
-        <div class="detail-info-label">📡 渠道</div>
-        <div class="detail-info-value">${trace.channel || '--'}</div>
-      </div>
-      <div class="detail-info-item">
-        <div class="detail-info-label">🧠 模型</div>
-        <div class="detail-info-value">${trace.model || '--'}</div>
-      </div>
-      <div class="detail-info-item">
-        <div class="detail-info-label">🔗 会话</div>
-        <div class="detail-info-value">${trace.sessionId || '--'}</div>
-      </div>
-      <div class="detail-info-item">
-        <div class="detail-info-label">⏱️ 耗时</div>
-        <div class="detail-info-value">${formatDuration(trace.durationMs)}</div>
+      <div class="detail-header-row">
+        <div class="detail-header-card">
+          <span class="card-label">⬇️ 输入Token</span>
+          <span class="card-value">${formatNumber(input)}</span>
+        </div>
+        <div class="detail-header-card">
+          <span class="card-label">⬆️ 输出Token</span>
+          <span class="card-value">${formatNumber(output)}</span>
+        </div>
+        <div class="detail-header-card">
+          <span class="card-label">⚡ 缓存命中</span>
+          <span class="card-value">${formatNumber(cacheRead)}</span>
+        </div>
+        <div class="detail-header-card">
+          <span class="card-label">💰 成本</span>
+          <span class="card-value">${formatCost(costTotal)}</span>
+        </div>
       </div>
     </div>
   `;
   document.getElementById('detailMeta').style.display = 'none';
 
-  // 构建详情内容
+  // 构建详情内容（三栏竖向并列：系统提示词、历史消息、模型交互过程）
   let html = '';
 
-  // 请求
-  html += `
-    <div class="detail-block">
-      <div class="detail-block-header">
-        <span>📥 请求内容</span>
-        <span>🏢 模型提供方: ${trace.provider}</span>
-      </div>
-      <div class="detail-block-content">${formatRequest(trace.request, trace.timestamp)}</div>
-    </div>
-  `;
+  // 系统提示词（默认折叠）
+  html += formatSystemPromptBlock(trace.request);
 
-  // 响应
+  // 历史消息（默认折叠）
+  html += formatHistoryBlock(trace.request);
+
+  // 模型交互过程（默认展开）
   const responseEndTime = trace.timestamp && trace.durationMs
     ? new Date(new Date(trace.timestamp).getTime() + trace.durationMs).toISOString()
     : null;
-  html += `
-    <div class="detail-block">
-      <div class="detail-block-header">
-        <span>📤 响应内容</span>
-        <span>⏱️ 耗时: ${formatDuration(trace.durationMs)}</span>
-      </div>
-      <div class="detail-block-content">${formatResponse(trace.response, trace.toolCalls, responseEndTime)}</div>
-    </div>
-  `;
-
-  // Usage 详情（从 lastAssistant.usage 获取完整信息）
-  html += formatUsageDetail(trace);
-
-  // 错误信息
-  if (trace.errorMessage) {
-    html += `
-      <div class="detail-block error-block">
-        <div class="detail-block-header">
-          <span>❌ 错误信息</span>
-        </div>
-        <div class="detail-block-content">${trace.errorMessage}</div>
-      </div>
-    `;
-  }
+  html += formatInteractionBlock(trace.request, trace.timestamp, trace.response, trace.toolCalls, responseEndTime, trace.errorMessage);
 
   document.getElementById('detailBody').innerHTML = html;
 
@@ -283,6 +277,21 @@ async function showDetail(id) {
     header.addEventListener('click', () => {
       const content = header.nextElementSibling;
       const toggle = header.querySelector('.section-toggle');
+      if (content.classList.contains('collapsed')) {
+        content.classList.remove('collapsed');
+        toggle.textContent = '收起';
+      } else {
+        content.classList.add('collapsed');
+        toggle.textContent = '展开';
+      }
+    });
+  });
+
+  // 绑定可折叠区块的折叠事件
+  document.querySelectorAll('.collapsible-block .detail-block-header').forEach(header => {
+    header.addEventListener('click', () => {
+      const content = header.nextElementSibling;
+      const toggle = header.querySelector('.block-toggle');
       if (content.classList.contains('collapsed')) {
         content.classList.remove('collapsed');
         toggle.textContent = '收起';
@@ -445,6 +454,83 @@ function formatMessageContent(type, data) {
       // 未知类型，JSON展示
       return `<div class="content-json"><pre>${escapeHtml(JSON.stringify(data, null, 2))}</pre></div>`;
   }
+}
+
+/**
+ * 格式化系统提示词区块（默认折叠）
+ */
+function formatSystemPromptBlock(request) {
+  if (!request || !request.systemPrompt) return '';
+
+  return `
+    <div class="detail-block collapsible-block">
+      <div class="detail-block-header">
+        <span>🤖 系统提示词</span>
+        <span class="block-toggle">展开</span>
+      </div>
+      <div class="detail-block-content collapsed">
+        ${createChatMessage('system', '🤖 System', request.systemPrompt, { maxLines: Infinity, maxChars: Infinity })}
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * 格式化历史消息区块（默认折叠）
+ */
+function formatHistoryBlock(request) {
+  if (!request || !request.historyMessages || request.historyMessages.length === 0) return '';
+
+  let historyHtml = '';
+  request.historyMessages.forEach(msg => {
+    historyHtml += formatHistoryMessage(msg);
+  });
+
+  return `
+    <div class="detail-block collapsible-block">
+      <div class="detail-block-header">
+        <span>📖 历史消息集 <span class="block-count">(${request.historyMessages.length}条)</span></span>
+        <span class="block-toggle">展开</span>
+      </div>
+      <div class="detail-block-content collapsed">
+        ${historyHtml}
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * 格式化模型交互过程区块（用户提示词 + 响应内容合并，默认展开）
+ */
+function formatInteractionBlock(request, timestamp, response, toolCalls, endTime, errorMessage) {
+  let contentHtml = '';
+
+  // 用户提示词
+  if (request && request.prompt) {
+    const { display, original } = extractUserMessage(request.prompt);
+    const timeHtml = timestamp ? `<div class="chat-time-divider">${formatPreciseTime(timestamp)}</div>` : '';
+    contentHtml += `${timeHtml}${createChatMessage('user', '👤 User', display, { rawContent: original })}`;
+  }
+
+  // 响应内容
+  contentHtml += formatResponse(response, toolCalls, endTime);
+
+  // 错误信息（如果有）
+  if (errorMessage) {
+    contentHtml += `<div class="response-error"><span class="error-icon">❌</span> ${escapeHtml(errorMessage)}</div>`;
+  }
+
+  return `
+    <div class="detail-block collapsible-block">
+      <div class="detail-block-header">
+        <span>💬 交互全过程</span>
+        <span class="block-toggle">收起</span>
+      </div>
+      <div class="detail-block-content">
+        ${contentHtml || '<div class="chat-empty">暂无交互内容</div>'}
+      </div>
+    </div>
+  `;
 }
 
 function formatRequest(request, timestamp) {
@@ -664,9 +750,9 @@ function formatToolCallFromHook(tool, turnNumber) {
   let durationLabel = '';
   if (durationMs) {
     if (durationMs < 1000) {
-      durationLabel = ` (耗时 ${durationMs}ms)`;
+      durationLabel = ` <span class="tool-duration">(耗时 ${durationMs}ms)</span>`;
     } else {
-      durationLabel = ` (耗时 ${(durationMs / 1000).toFixed(1)}s)`;
+      durationLabel = ` <span class="tool-duration">(耗时 ${(durationMs / 1000).toFixed(1)}s)</span>`;
     }
   }
 
@@ -732,69 +818,6 @@ function escapeAttr(text) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
-}
-
-function formatUsageDetail(trace) {
-  // 从 response 获取完整 usage 信息
-  const usage = trace.response?.usage || {};
-  const lastAssistantUsage = trace.response?.lastAssistant?.usage || {};
-
-  // Token 信息：优先用 usage，再用 lastAssistant.usage，最后用数据库字段
-  const input = usage.input || lastAssistantUsage.input || trace.inputTokens || 0;
-  const output = usage.output || lastAssistantUsage.output || trace.outputTokens || 0;
-  const cacheRead = usage.cacheRead || lastAssistantUsage.cacheRead || trace.cacheReadTokens || 0;
-  const cacheWrite = lastAssistantUsage.cacheWrite || trace.cacheWriteTokens || 0;
-  const total = usage.total;  // 直接用 usage.total
-
-  // Cost 信息：从 lastAssistant.usage.cost 获取
-  const costInfo = lastAssistantUsage.cost || {};
-  const costInput = costInfo.input || 0;
-  const costOutput = costInfo.output || 0;
-  const costCacheRead = costInfo.cacheRead || 0;
-  const costCacheWrite = costInfo.cacheWrite || 0;
-  const costTotal = costInfo.total || trace.cost || 0;
-
-  // 停止原因和响应ID
-  const stopReason = trace.response?.lastAssistant?.stopReason || '--';
-  const responseId = trace.response?.lastAssistant?.responseId || '--';
-
-  return `
-    <div class="detail-block">
-      <div class="detail-block-header">
-        <span>📊 Usage 详情</span>
-      </div>
-      <div class="usage-grid">
-        <div class="usage-section">
-          <h4>📊 Token 统计</h4>
-          <table class="usage-table">
-            <tr><td>📥 输入 Token</td><td>${formatNumber(input)}</td></tr>
-            <tr><td>📤 输出 Token</td><td>${formatNumber(output)}</td></tr>
-            <tr><td>⚡ 命中缓存</td><td>${formatNumber(cacheRead)}</td></tr>
-            <tr><td>💾 缓存写入</td><td>${formatNumber(cacheWrite)}</td></tr>
-            <tr class="total-row"><td><strong>📊 总计</strong></td><td><strong>${formatNumber(total)}</strong></td></tr>
-          </table>
-        </div>
-        <div class="usage-section">
-          <h4>💰 成本明细</h4>
-          <table class="usage-table">
-            <tr><td>📥 输入成本</td><td>${formatCost(costInput)}</td></tr>
-            <tr><td>📤 输出成本</td><td>${formatCost(costOutput)}</td></tr>
-            <tr><td>⚡ 缓存读取</td><td>${formatCost(costCacheRead)}</td></tr>
-            <tr><td>💾 缓存写入</td><td>${formatCost(costCacheWrite)}</td></tr>
-            <tr class="total-row"><td><strong>💰 总成本</strong></td><td><strong>${formatCost(costTotal)}</strong></td></tr>
-          </table>
-        </div>
-        <div class="usage-section">
-          <h4>📋 其他信息</h4>
-          <table class="usage-table">
-            <tr><td>🛑 停止原因</td><td><span class="status status-${trace.status}">${stopReason}</span></td></tr>
-            <tr><td>🔖 响应 ID</td><td><code class="response-id">${responseId}</code></td></tr>
-            <tr><td>🔗 Session</td><td><code class="response-id">${trace.sessionId || '--'}</code></td></tr>
-          </table>
-        </div>
-      </div>
-    </div>
-  `;
 }
 
 // ==================== 统计视图 ====================
