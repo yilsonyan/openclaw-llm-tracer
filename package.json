@@ -13,6 +13,9 @@
   "engines": {
     "node": ">=22.0.0"
   },
+  "scripts": {
+    "package": "zip -r openclaw-llm-tracer.zip . -x '.git/*' '.idea/*' 'data/*' 'DESIGN.md' 'openclaw-llm-tracer.md' '*.DS_Store'"
+  },
   "keywords": [
     "openclaw",
     "llm",
