@@ -509,7 +509,7 @@ function formatInteractionBlock(request, timestamp, response, toolCalls, endTime
   if (request && request.prompt) {
     const { display, original } = extractUserMessage(request.prompt);
     const timeHtml = timestamp ? `<div class="chat-time-divider">${formatPreciseTime(timestamp)}</div>` : '';
-    contentHtml += `${timeHtml}${createChatMessage('user', '👤 User', display, { rawContent: original })}`;
+    contentHtml += `${timeHtml}${createChatMessage('user', '👤 User', display, { rawContent: original, maxLines: 20, maxChars: 5000 })}`;
   }
 
   // 响应内容
