@@ -3,7 +3,13 @@
   "name": "OpenClaw LLM Tracer",
   "description": "记录 OpenClaw LLM 交互，提供可视化查询界面",
   "version": "1.0.0",
-  "hooks": ["llm_input", "llm_output", "before_tool_call", "after_tool_call", "tool_result_persist"],
+  "hooks": [
+    "llm_input",
+    "llm_output",
+    "before_tool_call",
+    "after_tool_call",
+    "tool_result_persist"
+  ],
   "configSchema": {
     "type": "object",
     "properties": {

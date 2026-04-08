@@ -78,8 +78,10 @@ const plugin = {
   description: "记录 LLM 交互，提供可视化查询界面",
 
   register(api: OpenClawPluginApi) {
-    const rawConfig = api.config?.plugins?.entries?.["openclaw-llm-tracer"]?.config ?? {};
+    // 配置通过 pluginConfig 传入
+    const rawConfig = api.pluginConfig && typeof api.pluginConfig === 'object' ? api.pluginConfig : {};
     const config: PluginConfig = { ...DEFAULT_CONFIG, ...rawConfig };
+    //api.logger.info(`[openclaw-llm-tracer] API structure: api=${JSON.stringify(api)}`);
 
     if (!config.enabled) {
       api.logger.info("[openclaw-llm-tracer] Plugin disabled");
@@ -270,16 +272,11 @@ async function initAsync(config: PluginConfig, api: OpenClawPluginApi) {
       return;
     }
 
-    api.logger.info("[openclaw-llm-tracer] Store ready");
-
     // 启动 UI 服务器
     if (config.uiEnabled) {
       try {
         const { startUIServer } = await import("./server.js");
         server = startUIServer(store, config.uiPort, api.logger);
-        if (server) {
-          api.logger.info(`[openclaw-llm-tracer] UI available at http://localhost:${config.uiPort}`);
-        }
       } catch (err: any) {
         api.logger.error("[openclaw-llm-tracer] UI server error:", err?.message || err);
       }
