@@ -4,8 +4,8 @@
  * 提供 API 和 UI 服务
  */
 
-import { createServer, type IncomingMessage, type ServerResponse, type Server } from "node:http";
-import { readFile, statSync, existsSync } from "node:fs";
+import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { readFile, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { TraceStore } from "./store.js";
@@ -59,40 +59,30 @@ export function startUIServer(
       // 静态文件
       await handleStatic(req, res, pathname, uiDir);
     } catch (err) {
-      logger?.error?.(`[openclaw-llm-tracer] Server error: ${err}`);
       res.writeHead(500, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "Internal Server Error" }));
     }
   });
 
-  // 错误处理
   server.on("error", (err: any) => {
     if (err.code === "EADDRINUSE") {
-      logger?.error?.(`[openclaw-llm-tracer] Port ${port} is already in use, UI server not started`);
+      logger?.error?.(`[openclaw-llm-tracer] Port ${port} is already in use`);
     } else {
       logger?.error?.(`[openclaw-llm-tracer] Server error: ${err.message}`);
     }
   });
 
-  let isListening = false;
-
-  try {
-    server.listen(port, () => {
-      isListening = true;
-      logger?.info?.(`[openclaw-llm-tracer] UI server started at http://localhost:${port}`);
-    });
-  } catch (err: any) {
-    logger?.error?.(`[openclaw-llm-tracer] Failed to start UI server: ${err.message}`);
-    return null;
-  }
+  server.listen(port, () => {
+    // unref 让服务器不阻止进程退出
+    server.unref();
+    logger?.info?.(`[openclaw-llm-tracer] UI server started at http://localhost:${port}`);
+  });
 
   return {
     close: () => {
-      if (isListening) {
-        try {
-          server.close();
-        } catch {}
-      }
+      try {
+        server.close();
+      } catch {}
     },
     port,
   };
