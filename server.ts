@@ -29,13 +29,14 @@ export interface UIServer {
 
 /**
  * 清理占用端口的进程
- * 返回被杀掉的 PID，如果没有进程占用则返回 null
+ * 返回 true 表示端口可用（原本空闲或已成功清理）
+ * 返回 false 表示端口仍被占用（其他进程在重启）
  */
-function killPortProcess(port: number, logger?: PluginLogger): string | null {
+function ensurePortAvailable(port: number, logger?: PluginLogger): string | null {
   try {
     // 获取占用端口的 PID
     const pid = execSync(`lsof -t -i :${port} 2>/dev/null`, { encoding: "utf-8" }).trim();
-    if (!pid) return null;
+    if (!pid) return null; // 端口空闲
 
     // 不杀自己
     if (pid === process.pid.toString()) return null;
@@ -43,23 +44,25 @@ function killPortProcess(port: number, logger?: PluginLogger): string | null {
     // 杀掉进程
     execSync(`kill -9 ${pid} 2>/dev/null`);
 
-    // 等待端口释放（简单循环，最多 2000ms）
-    for (let i = 0; i < 20; i++) {
+    // 等待端口释放（最多 500ms）
+    for (let i = 0; i < 5; i++) {
+      const start = Date.now();
+      while (Date.now() - start < 100) {} // 等 100ms
       try {
         execSync(`lsof -t -i :${port} 2>/dev/null`);
-        // 还有进程占用，等 100ms
-        const start = Date.now();
-        while (Date.now() - start < 100) {}
+        // 还有进程占用，说明有服务在重启
+        //logger?.warn?.(`[openclaw-llm-tracer] Port ${port} still in use after kill, another process may be restarting`);
+        return null;
       } catch {
         // 端口已释放
-        break;
+        return pid;
       }
     }
     return pid;
   } catch {
-    // 端口未被占用或命令失败
+    // 端口未被占用
+    return null;
   }
-  return null;
 }
 
 // ==================== 服务器创建 ====================
@@ -69,8 +72,8 @@ export function startUIServer(
   port: number,
   logger?: PluginLogger
 ): UIServer | null {
-  // 先清理占用端口的进程
-  const killedPid = killPortProcess(port, logger);
+  // 清理占用端口的进程
+  const killedPid = ensurePortAvailable(port, logger);
 
   const __dirname = dirname(fileURLToPath(import.meta.url));
   const uiDir = join(__dirname, "ui");
