@@ -8,6 +8,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { readFile, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { execSync } from "node:child_process";
 import type { TraceStore } from "./store.js";
 
 // ==================== 类型定义 ====================
@@ -24,6 +25,43 @@ export interface UIServer {
   port: number;
 }
 
+// ==================== 端口清理 ====================
+
+/**
+ * 清理占用端口的进程
+ * 返回被杀掉的 PID，如果没有进程占用则返回 null
+ */
+function killPortProcess(port: number, logger?: PluginLogger): string | null {
+  try {
+    // 获取占用端口的 PID
+    const pid = execSync(`lsof -t -i :${port} 2>/dev/null`, { encoding: "utf-8" }).trim();
+    if (!pid) return null;
+
+    // 不杀自己
+    if (pid === process.pid.toString()) return null;
+
+    // 杀掉进程
+    execSync(`kill -9 ${pid} 2>/dev/null`);
+
+    // 等待端口释放（简单循环，最多 2000ms）
+    for (let i = 0; i < 20; i++) {
+      try {
+        execSync(`lsof -t -i :${port} 2>/dev/null`);
+        // 还有进程占用，等 100ms
+        const start = Date.now();
+        while (Date.now() - start < 100) {}
+      } catch {
+        // 端口已释放
+        break;
+      }
+    }
+    return pid;
+  } catch {
+    // 端口未被占用或命令失败
+  }
+  return null;
+}
+
 // ==================== 服务器创建 ====================
 
 export function startUIServer(
@@ -31,6 +69,9 @@ export function startUIServer(
   port: number,
   logger?: PluginLogger
 ): UIServer | null {
+  // 先清理占用端口的进程
+  const killedPid = killPortProcess(port, logger);
+
   const __dirname = dirname(fileURLToPath(import.meta.url));
   const uiDir = join(__dirname, "ui");
 
@@ -75,7 +116,10 @@ export function startUIServer(
   server.listen(port, () => {
     // unref 让服务器不阻止进程退出
     server.unref();
-    logger?.info?.(`[openclaw-llm-tracer] UI server started at http://localhost:${port}`);
+    const msg = killedPid
+      ? `UI server started at http://localhost:${port} (killed old process ${killedPid})`
+      : `UI server started at http://localhost:${port}`;
+    logger?.info?.(`[openclaw-llm-tracer] ${msg}`);
   });
 
   return {
