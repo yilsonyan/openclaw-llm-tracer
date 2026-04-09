@@ -662,6 +662,9 @@ export class TraceStore {
         }
       }
 
+      // 执行 VACUUM 回收磁盘空间
+      this.db.exec("VACUUM");
+
       return traceCount;
     } catch (err) {
       console.error("[openclaw-llm-tracer] clearTraces error:", err);
