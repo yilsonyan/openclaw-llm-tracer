@@ -27,6 +27,7 @@ type HookAgentContext = {
 type OpenClawPluginApi = {
   config?: any;
   pluginConfig?: unknown;
+  registrationMode?: "full" | "setup-only" | "setup-runtime" | "cli-metadata";
   logger: PluginLogger;
   on: (
     hookName: string,
@@ -78,6 +79,11 @@ const plugin = {
   description: "记录 LLM 交互，提供可视化查询界面",
 
   register(api: OpenClawPluginApi) {
+    // 只在 full 模式下进行完整初始化
+    if (api.registrationMode && api.registrationMode !== "full") {
+      return;
+    }
+
     // 配置通过 pluginConfig 传入
     const rawConfig = api.pluginConfig && typeof api.pluginConfig === 'object' ? api.pluginConfig : {};
     const config: PluginConfig = { ...DEFAULT_CONFIG, ...rawConfig };
