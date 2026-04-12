@@ -40,41 +40,13 @@ OpenClaw LLM 交互追踪器 - 可视化追踪 OpenClaw 与 LLM（Large Language
 ```
 
 ### 2. 配置 OpenClaw
-修改 OpenClaw 主配置文件，在 `plugins.entries` 节点添加以下配置：
+修改 OpenClaw 主配置文件，在 `plugins.entries` 节点启用 openclaw-llm-tracer 插件：
 
 ![pic](doc_resources/config.jpg)
 
-#### 添加插件配置
-
-
-
-```json
-{
-  "openclaw-llm-tracer": {
-    "enabled": true,
-    "config": {
-      "uiEnabled": true,
-      "uiPort": 80,
-      "dbPath": "~/.openclaw/extensions/openclaw-llm-tracer/data/traces.db"
-    }
-  }
-}
-```
-
-#### 添加到允许列表
-在 `allow` 数组中添加插件名称 openclaw-llm-tracer：
-```json
-{
-  "allow": [
-    "其他插件...",
-    "openclaw-llm-tracer"
-  ]
-}
-```
-
 ---
 
-#### ⚙️ 配置说明
+#### ⚙️ 配置说明（安装后默认已自动使用该配置，非特殊需求不需要配置该部分）
 
 | 配置项 | 类型 | 默认值                                                         | 说明 |
 |--------|------|-------------------------------------------------------------|------|
