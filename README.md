@@ -1,6 +1,6 @@
 # OpenClaw LLM Tracer
-OpenClaw LLM 交互追踪器 - 可视化追踪 OpenClaw 与 LLM（Large Language Model）的交互信息，包含工具调用的出入参内容、模型处理和返回的内容。
->  — 📊 Token 统计 · 💰 费用管理 · 👁 交互可视 · 🔒 隐私保护
+OpenClaw LLM 交互追踪器 - 可视化追踪 OpenClaw 与 LLM（Large Language Model）的交互信息，包含工具调用的出入参内容、模型处理和返回的内容。  
+龙虾从此不再是黑箱运行，所有操作有迹可循。
 
 ---
 
