@@ -28,21 +28,35 @@ export interface UIServer {
 // ==================== 端口清理 ====================
 
 /**
- * 清理占用端口的进程
- * 返回 true 表示端口可用（原本空闲或已成功清理）
- * 返回 false 表示端口仍被占用（其他进程在重启）
+ * 检查端口是否被当前进程占用
  */
-function ensurePortAvailable(port: number, logger?: PluginLogger): string | null {
+function isPortOwnedByCurrentProcess(port: number): boolean {
   try {
-    // 获取占用端口的 PID
+    const pid = execSync(`lsof -t -i :${port} 2>/dev/null`, { encoding: "utf-8" }).trim();
+    return pid === process.pid.toString();
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 清理占用端口的进程（其他进程）
+ * 返回 killed PID 如果清理了其他进程
+ */
+function killOtherProcessOnPort(port: number, logger?: PluginLogger): string | null {
+  try {
     const pid = execSync(`lsof -t -i :${port} 2>/dev/null`, { encoding: "utf-8" }).trim();
     if (!pid) return null; // 端口空闲
 
-    // 不杀自己
-    if (pid === process.pid.toString()) return null;
+    // 不杀自己进程
+    if (pid === process.pid.toString()) {
+      logger?.info?.(`[openclaw-llm-tracer] Port ${port} already owned by current process, skipping`);
+      return null;
+    }
 
-    // 杀掉进程
+    // 杀掉其他进程
     execSync(`kill -9 ${pid} 2>/dev/null`);
+    logger?.info?.(`[openclaw-llm-tracer] Killed process ${pid} on port ${port}`);
 
     // 等待端口释放（最多 500ms）
     for (let i = 0; i < 5; i++) {
@@ -50,9 +64,7 @@ function ensurePortAvailable(port: number, logger?: PluginLogger): string | null
       while (Date.now() - start < 100) {} // 等 100ms
       try {
         execSync(`lsof -t -i :${port} 2>/dev/null`);
-        // 还有进程占用，说明有服务在重启
-        //logger?.warn?.(`[openclaw-llm-tracer] Port ${port} still in use after kill, another process may be restarting`);
-        return null;
+        // 还有进程占用
       } catch {
         // 端口已释放
         return pid;
@@ -72,8 +84,14 @@ export function startUIServer(
   port: number,
   logger?: PluginLogger
 ): UIServer | null {
-  // 清理占用端口的进程
-  const killedPid = ensurePortAvailable(port, logger);
+  // 如果端口已被当前进程占用，说明已有 server 在运行，直接返回 null
+  if (isPortOwnedByCurrentProcess(port)) {
+    logger?.info?.(`[openclaw-llm-tracer] UI server already running on port ${port} in current process`);
+    return null;
+  }
+
+  // 清理其他进程占用的端口
+  const killedPid = killOtherProcessOnPort(port, logger);
 
   const __dirname = dirname(fileURLToPath(import.meta.url));
   const uiDir = join(__dirname, "ui");

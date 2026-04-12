@@ -69,6 +69,11 @@ const inFlightRequests = new Map<string, InFlightRequest>();
 let store: any = null;
 let server: any = null;
 
+// 初始化状态
+let initStatus: 'not_init' | 'initializing' | 'init_finished' | 'init_failed' = 'not_init';
+// UI 服务器端口记录（避免同一端口多次启动）
+let activeServerPort: number | null = null;
+
 // 工具调用开始时间记录（用于保证顺序）
 // key: runId, value: Map<toolCallId, startTime>
 const toolStartTimes = new Map<string, Map<string, string>>();
@@ -94,12 +99,17 @@ const plugin = {
       return;
     }
 
-    api.logger.info("[openclaw-llm-tracer] Plugin registered, initializing async...");
-
-    // 异步初始化，不阻塞
-    initAsync(config, api).catch(err => {
-      api.logger.error("[openclaw-llm-tracer] Init failed:", err?.message || err);
-    });
+    // 防止重复初始化（只控制 initAsync，hooks 仍需注册）
+    // not_init 或 init_failed 时可以初始化，initializing 或 init_finished 时跳过
+    const shouldInit = initStatus === 'not_init' || initStatus === 'init_failed';
+    if (shouldInit) {
+      initStatus = 'initializing';
+      api.logger.info("[openclaw-llm-tracer] Plugin initializing...");
+      // 异步初始化（只执行一次）
+      initAsync(config, api).catch(err => {
+        api.logger.error("[openclaw-llm-tracer] Init failed:", err?.message || err);
+      });
+    }
 
     // 注册 llm_input hook
     api.on("llm_input", (event: any, ctx?: HookAgentContext) => {
@@ -267,28 +277,53 @@ const plugin = {
 
 async function initAsync(config: PluginConfig, api: OpenClawPluginApi) {
   try {
-    // 动态导入模块
-    const { TraceStore } = await import("./store.js");
+    // store 只初始化一次
+    if (!store) {
+      const { TraceStore } = await import("./store.js");
+      store = new TraceStore(config.dbPath, config.redactSensitive);
 
-    store = new TraceStore(config.dbPath, config.redactSensitive);
-
-    if (!store.isReady()) {
-      api.logger.error("[openclaw-llm-tracer] Store init failed:", store.getInitError());
-      store = null;
-      return;
+      if (!store.isReady()) {
+        api.logger.error("[openclaw-llm-tracer] Store init failed:", store.getInitError());
+        store = null;
+        initStatus = 'init_failed';
+        return;
+      }
     }
 
-    // 启动 UI 服务器
+    // UI 服务器：检查是否已在目标端口运行
     if (config.uiEnabled) {
+      // 如果端口已记录且匹配，跳过（不打印日志）
+      if (activeServerPort === config.uiPort) {
+        initStatus = 'init_finished';
+        return;
+      }
+
+      // 如果端口不同，需要关闭旧 server
+      if (server && activeServerPort !== config.uiPort) {
+        try {
+          server.close();
+          api.logger.info(`[openclaw-llm-tracer] Closed old server on port ${activeServerPort}, starting on ${config.uiPort}`);
+        } catch {}
+        server = null;
+        activeServerPort = null;
+      }
+
       try {
         const { startUIServer } = await import("./server.js");
         server = startUIServer(store, config.uiPort, api.logger);
+        if (server) {
+          activeServerPort = config.uiPort;
+        }
       } catch (err: any) {
         api.logger.error("[openclaw-llm-tracer] UI server error:", err?.message || err);
+        initStatus = 'init_failed';
       }
     }
+
+    initStatus = 'init_finished';
   } catch (err: any) {
     api.logger.error("[openclaw-llm-tracer] Init error:", err?.message || err);
+    initStatus = 'init_failed';
   }
 }
 
