@@ -265,12 +265,7 @@ const plugin = {
       api.logger.debug?.(`[openclaw-llm-tracer] after_tool_call: ${event.toolName} (runId: ${runId})`);
     });
 
-    // 注册 tool_result_persist hook
-    api.on("tool_result_persist", (event: any, ctx?: HookAgentContext) => {
-      if (!store) return;
-      api.logger.debug?.(`[openclaw-llm-tracer] tool_result_persist: ${event.toolName}`);
-    });
-  },
+    },
 };
 
 // ==================== 异步初始化 ====================

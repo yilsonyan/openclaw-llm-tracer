@@ -7,8 +7,7 @@
     "llm_input",
     "llm_output",
     "before_tool_call",
-    "after_tool_call",
-    "tool_result_persist"
+    "after_tool_call"
   ],
   "configSchema": {
     "type": "object",
