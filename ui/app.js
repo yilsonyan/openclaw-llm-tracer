@@ -596,21 +596,25 @@ function formatRequest(request, timestamp) {
 }
 
 function formatResponse(response, toolCalls, endTime) {
-  if (!response) return '<div class="chat-empty">暂无响应内容</div>';
-
   let html = '';
 
-  // 如果有 toolCalls（从数据库查询），展示工具调用
+  // 首先渲染工具调用（即使 response 为空也显示，因为会话没结束但可能工具调用已经发生了）
+  // 这确保在会话进行中（pending 状态）也能看到已完成的工具调用
   if (toolCalls && toolCalls.length > 0) {
     toolCalls.forEach((tool, index) => {
       html += formatToolCallFromHook(tool, index + 1);
     });
   }
   // 兼容旧数据：如果 toolCalls 在 response 内部
-  else if (response.toolCalls && response.toolCalls.length > 0) {
+  else if (response && response.toolCalls && response.toolCalls.length > 0) {
     response.toolCalls.forEach((tool, index) => {
       html += formatToolCallFromHook(tool, index + 1);
     });
+  }
+
+  // 如果 response 为空但有工具调用，返回工具调用内容
+  if (!response) {
+    return html || '<div class="chat-empty">暂无响应内容</div>';
   }
 
   // 如果有 allAssistantMessages（包含所有中间轮次），展示它们
