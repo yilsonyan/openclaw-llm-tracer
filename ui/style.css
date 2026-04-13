@@ -1029,6 +1029,34 @@ body {
   overflow: auto;
 }
 
+.tool-output .expanded-content {
+  max-height: none;
+  overflow: visible;
+}
+
+.result-length {
+  font-size: 11px;
+  color: #888;
+  margin-left: 8px;
+}
+
+.expand-btn {
+  margin-top: 8px;
+  padding: 4px 12px;
+  font-size: 12px;
+  color: #666;
+  background: #f0f0f0;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.expand-btn:hover {
+  background: #e0e0e0;
+  border-color: #ccc;
+}
+
 .content-thinking {
   margin: 0;
   padding: 10px 12px;

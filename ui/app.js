@@ -760,7 +760,22 @@ function formatToolCallFromHook(tool, turnNumber) {
   const toolUseBlock = `<div class="content-tool-use"><div class="tool-header">调用: <code>${name}</code></div><div class="tool-params">${escapeHtml(JSON.stringify(params, null, 2))}</div></div>`;
 
   // 执行结果区块（绿色）
-  const resultBlock = resultText ? `<div class="content-tool-result"><div class="tool-header">✅ 执行结果</div><div class="tool-output">${escapeHtml(resultText.substring(0, 2000))}${resultText.length > 2000 ? '...' : ''}</div></div>` : '';
+  let resultBlock = '';
+  if (resultText) {
+    const maxDisplayLen = 2000;
+    const needsCollapse = resultText.length > maxDisplayLen;
+    const displayText = needsCollapse ? resultText.substring(0, maxDisplayLen) : resultText;
+    const uniqueId = `tool-result-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+    if (needsCollapse) {
+      // 需要折叠：显示截断内容 + 展开按钮
+      resultBlock = `<div class="content-tool-result"><div class="tool-header">✅ 执行结果 <span class="result-length">(${formatSize(resultText.length)})</span></div><div class="tool-output" id="${uniqueId}"><div class="collapsed-content">${escapeHtml(displayText)}...</div><button class="expand-btn" onclick="toggleToolResult('${uniqueId}', this)">展开完整内容</button></div></div>`;
+      // 存储完整内容供展开使用
+      window[`__fullResult_${uniqueId}`] = resultText;
+    } else {
+      resultBlock = `<div class="content-tool-result"><div class="tool-header">✅ 执行结果</div><div class="tool-output">${escapeHtml(displayText)}</div></div>`;
+    }
+  }
 
   return `${timeDividerHtml}<div class="chat-message chat-tool-use"><div class="chat-bubble"><div class="chat-header"><span class="chat-role">🔧 工具调用 #${turnNumber}${durationLabel}</span><span class="raw-hint">{raw}</span></div><div class="chat-content">${toolUseBlock}${resultBlock}</div><div class="raw-tooltip"><span class="raw-tooltip-close">&times;</span><div class="raw-tooltip-content"><pre>${escapeHtml(JSON.stringify(tool, null, 2))}</pre></div></div></div></div>`;
 }
@@ -808,6 +823,29 @@ function escapeHtml(text) {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;')
     .replace(/\n/g, '<br>');
+}
+
+// 格式化内容大小
+function formatSize(len) {
+  if (len < 1024) return `${len} 字符`;
+  if (len < 1024 * 1024) return `${(len / 1024).toFixed(1)} KB`;
+  return `${(len / 1024 / 1024).toFixed(2)} MB`;
+}
+
+// 展开/收起工具结果
+function toggleToolResult(id, btn) {
+  const container = document.getElementById(id);
+  const fullText = window[`__fullResult_${id}`];
+  if (!container || !fullText) return;
+
+  const isExpanded = btn.textContent.includes('收起');
+  if (isExpanded) {
+    // 收起
+    container.innerHTML = `<div class="collapsed-content">${escapeHtml(fullText.substring(0, 2000))}...</div><button class="expand-btn" onclick="toggleToolResult('${id}', this)">展开完整内容</button>`;
+  } else {
+    // 展开
+    container.innerHTML = `<div class="expanded-content">${escapeHtml(fullText)}</div><button class="expand-btn" onclick="toggleToolResult('${id}', this)">收起</button>`;
+  }
 }
 
 function escapeAttr(text) {
