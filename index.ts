@@ -308,6 +308,11 @@ async function initAsync(config: PluginConfig, api: OpenClawPluginApi) {
         server = startUIServer(store, config.uiPort, api.logger);
         if (server) {
           activeServerPort = config.uiPort;
+        } else {
+          // server 为 null 可能是端口被占用（先前已启动），打印一次提示
+          if (activeServerPort !== config.uiPort) {
+            api.logger.info(`[openclaw-llm-tracer] Port ${config.uiPort} in use, UI server possibly already started`);
+          }
         }
       } catch (err: any) {
         api.logger.error("[openclaw-llm-tracer] UI server error:", err?.message || err);
